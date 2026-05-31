@@ -10,25 +10,31 @@ from pathlib import Path
 from typing import Any, Dict
 
 CLOUD_CONFIG = {
-    'S2-16D-2': {
+    'BDC:S2-16D-2': {
         'cloud_band': 'SCL',
         'non_cloud_values': [4, 5, 6],
         'cloud_values': [0, 1, 2, 3, 7, 8, 9, 10, 11],
         'no_data_value': 0
     },
-    'S2_L2A-1': {
+    'BDC:S2_L2A-1': {
         'cloud_band': 'SCL',
         'non_cloud_values': [4, 5, 6],
         'cloud_values': [0, 1, 2, 3, 7, 8, 9, 10, 11],
         'no_data_value': 0
     },
-    'S2_L1C_BUNDLE-1': {
+    'BDC:S2_L1C_BUNDLE-1': {
         'cloud_band': 'FMASK',
         'non_cloud_values': [0, 1],
         'cloud_values': [2, 3, 4, 255],
         'no_data_value': 255
     },
-    'sentinel-2-l2a': {
+    'PLANETARY-COMPUTER:sentinel-2-l2a': {
+        'cloud_band': 'SCL',
+        'non_cloud_values': [4, 5, 6],
+        'cloud_values': [0, 1, 2, 3, 7, 8, 9, 10, 11],
+        'no_data_value': 0
+    },
+    'DIGITALEARTH-AFRICA:s2_l2a': {
         'cloud_band': 'SCL',
         'non_cloud_values': [4, 5, 6],
         'cloud_values': [0, 1, 2, 3, 7, 8, 9, 10, 11],

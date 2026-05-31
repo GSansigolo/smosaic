@@ -19,7 +19,11 @@ def filter_scenes(collection, data_dir, geom, stac_source=None):
         data_dir (str): Directory path where scene data is stored.
         clip_geometry (shapely.geometry): Spatial boundary for clipping.
     """
-    if collection in ['S2_L2A-1','S2_L1C_BUNDLE-1','sentinel-2-l2a']:
+    
+    if (stac_source == "bdc" and collection == "S2_L1C_BUNDLE-1" or  
+        stac_source == "bdc" and collection == "S2_L2A-1" or 
+        stac_source == "planetary-computer" and collection == "sentinel-2-l2a" or 
+        stac_source == "digitalearth-africa" and collection == "s2_l2a"):
         grid_data = find_grid_by_name("MGRS")
     
     list_dir = [item for item in os.listdir(os.path.join(data_dir, collection))

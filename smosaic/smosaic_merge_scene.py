@@ -11,7 +11,7 @@ from rasterio.warp import Resampling
 from smosaic.smosaic_utils import clean_dir, get_all_cloud_configs
 
 
-def merge_scene(sorted_data, cloud_sorted_data, scenes, collection_name, band, data_dir, start_date=None, end_date=None):
+def merge_scene(sorted_data, cloud_sorted_data, scenes, collection_name, band, data_dir, stac_source, start_date=None, end_date=None):
     """
     Merge and organize raster scenes based on mosaic composition function and cloud cover data.
     
@@ -58,7 +58,8 @@ def merge_scene(sorted_data, cloud_sorted_data, scenes, collection_name, band, d
             )
 
         cloud_dict = get_all_cloud_configs()
-        clear_mask = np.isin(cloud_mask, cloud_dict[collection_name]['non_cloud_values'])
+        code = stac_source.upper()+":"+collection_name
+        clear_mask = np.isin(cloud_mask, cloud_dict[code]['non_cloud_values'])
 
         if 'nodata' not in profile or profile['nodata'] is None:
             profile['nodata'] = 0 
@@ -76,11 +77,11 @@ def merge_scene(sorted_data, cloud_sorted_data, scenes, collection_name, band, d
         with rasterio.open(os.path.join(data_dir, file_name), 'w', **profile) as dst:
             dst.write(masked_image)
 
-        profile['nodata'] = cloud_dict[collection_name]['no_data_value']
+        profile['nodata'] = cloud_dict[code]['no_data_value']
 
     for scene in scenes:
         
-        for i in [0,1, 2]:
+        for i in range(0, min(len(images), 4)):
 
             images =  [item['file'] for item in sorted_data if item.get("scene") == scene]
 
@@ -158,7 +159,7 @@ def merge_scene(sorted_data, cloud_sorted_data, scenes, collection_name, band, d
 
     return dict(merge_files=merge_files)
 
-def merge_scene_provenance_cloud(sorted_data, cloud_sorted_data, scenes, collection_name, band, data_dir, start_date=None, end_date=None):
+def merge_scene_provenance_cloud(sorted_data, cloud_sorted_data, scenes, collection_name, band, data_dir, stac_source, start_date=None, end_date=None):
     """
     Merge and organize raster scenes, including cloud band and provenance data, based on mosaic composition function.
     
@@ -214,12 +215,13 @@ def merge_scene_provenance_cloud(sorted_data, cloud_sorted_data, scenes, collect
             )
 
         cloud_dict = get_all_cloud_configs()
-        clear_mask = np.isin(cloud_mask, cloud_dict[collection_name]['non_cloud_values'])
+        code = stac_source.upper()+":"+collection_name
+        clear_mask = np.isin(cloud_mask, cloud_dict[code]['non_cloud_values'])
 
         if 'nodata' not in profile or profile['nodata'] is None:
             profile['nodata'] = 0 
         
-        cloud_profile['nodata'] = cloud_dict[collection_name]['no_data_value']
+        cloud_profile['nodata'] = cloud_dict[code]['no_data_value']
 
         masked_image = np.full_like(image_data, profile['nodata'])
         masked_image[:, clear_mask] = image_data[:, clear_mask]  
@@ -259,14 +261,14 @@ def merge_scene_provenance_cloud(sorted_data, cloud_sorted_data, scenes, collect
         with rasterio.open(os.path.join(data_dir, provenance_file_name), 'w', **profile) as dst:
             dst.write(provenance)
 
-        profile['nodata'] = cloud_dict[collection_name]['no_data_value']
+        profile['nodata'] = cloud_dict[code]['no_data_value']
 
         with rasterio.open(os.path.join(data_dir, cloud_item_file_name), 'w', **profile) as dst:
             dst.write(masked_cloud_image, 1)
 
     for scene in scenes:
         
-        for i in [0,1, 2]:
+        for i in range(0, min(len(images), 4)):
 
             images =  [item['file'] for item in sorted_data if item.get("scene") == scene]
             cloud_images = [item['file'] for item in cloud_sorted_data if item.get("scene") == scene]
