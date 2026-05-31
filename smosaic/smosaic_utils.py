@@ -27,6 +27,12 @@ CLOUD_CONFIG = {
         'non_cloud_values': [0, 1],
         'cloud_values': [2, 3, 4, 255],
         'no_data_value': 255
+    },
+    'sentinel-2-l2a': {
+        'cloud_band': 'SCL',
+        'non_cloud_values': [4, 5, 6],
+        'cloud_values': [0, 1, 2, 3, 7, 8, 9, 10, 11],
+        'no_data_value': 0
     }
 }
 

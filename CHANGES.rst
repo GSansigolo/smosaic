@@ -19,6 +19,10 @@
 Changes
 =======
 
+0.8.0 (2026-05-31)
+------------------
+* **Sentinel 2**: Planetary Computer Microsoft Sentinel 2 data.  🛰️
+
 0.7.0 (2026-02-03)
 ------------------
 

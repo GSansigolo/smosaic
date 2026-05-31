@@ -24,7 +24,7 @@ from smosaic.smosaic_spectral_indices import calculate_spectral_indices
 from smosaic.smosaic_utils import add_days_to_date, add_months_to_date, clean_dir, days_between_dates, get_all_cloud_configs, load_jsons
 
 
-def mosaic(name, data_dir, stac_url, collection, output_dir, start_year, start_month, start_day, mosaic_method, grid_crop=False, bands=None, reference_date=None, duration_days=None, end_year=None, end_month=None, end_day=None, duration_months=None, geom=None, grid=None, tile_id=None, bbox=None, profile=None, projection_output=4326):
+def mosaic(name, data_dir, stac_url, collection, output_dir, start_year, start_month, start_day, mosaic_method, stac_source="bdc", grid_crop=False, bands=None, reference_date=None, duration_days=None, end_year=None, end_month=None, end_day=None, duration_months=None, geom=None, grid=None, tile_id=None, bbox=None, profile=None, token=None,projection_output=4326):
     """
     Create satellite image mosaics using Brazil Data Cube collections.
     
@@ -100,7 +100,7 @@ def mosaic(name, data_dir, stac_url, collection, output_dir, start_year, start_m
 
     stac = pystac_client.Client.open(stac_url)
 
-    if collection not in ['S2_L2A-1','S2_L1C_BUNDLE-1']: #'S2-16D-2'
+    if collection not in ['S2_L2A-1','S2_L1C_BUNDLE-1', 'sentinel-2-l2a']:
         return print(f"{collection['collection']} collection not yet supported.")
     
     # grid
@@ -203,7 +203,7 @@ def mosaic(name, data_dir, stac_url, collection, output_dir, start_year, start_m
     collection_name = dict_collection['collection']
 
     if not os.path.exists(data_dir+"/"+collection):
-        collection_get_data(stac, dict_collection, data_dir=data_dir)
+        collection_get_data(stac, dict_collection, data_dir=data_dir, stac_source=stac_source, token=token)
 
     num_processes = multiprocessing.cpu_count()
 

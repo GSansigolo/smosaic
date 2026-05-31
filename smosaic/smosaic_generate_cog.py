@@ -37,4 +37,9 @@ def generate_cog(input_folder: str, input_filename: str, compress: str = 'LZW') 
 
     print(f"Raster saved to: {output_file}")
     
+    try:
+        os.remove(input_file)
+    except OSError:
+        pass
+
     return output_file
