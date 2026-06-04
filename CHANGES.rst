@@ -23,11 +23,13 @@ Changes
 ------------------
 * **Sentinel 2**: Planetary Computer Microsoft Sentinel 2 data.  🛰️
 * **Sentinel 2**: Digital Earth Africa Sentinel 2 data.  🛰️
-* **Sentinel 2**: Swiss Data- Cube Sentinel 2 data.  🛰️
+* **Sentinel 2**: Swiss Data Cube Sentinel 2 data.  🛰️
+* **Sentinel 2**: AWS Sentinel 2 data.  🛰️
 * **New Example Notebooks**: Added experimental Jupyter notebooks for article demonstrations:
     * ``smosaic-planetary-computer.ipynb``: Experiment on generating image mosaics for ...
     * ``smosaic-digital-earth-africa.ipynb``: Experiment on generating image mosaics for a...
     * ``smosaic-swiss-data-cube.ipynb``: Experiment on generating image mosaics for a...
+    * ``smosaic-aws.ipynb``: Experiment on generating image mosaics for a...
 
 0.7.0 (2026-02-03)
 ------------------

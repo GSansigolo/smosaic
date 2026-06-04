@@ -8,7 +8,7 @@ import numpy as np
 
 from rasterio.warp import Resampling
 
-from smosaic.smosaic_utils import clean_dir, get_all_cloud_configs
+from smosaic.smosaic_utils import clean_dir, get_all_cloud_configs, map_band_name
 
 
 def merge_scene(sorted_data, cloud_sorted_data, scenes, collection_name, band, data_dir, stac_source, start_date=None, end_date=None):
@@ -29,6 +29,10 @@ def merge_scene(sorted_data, cloud_sorted_data, scenes, collection_name, band, d
         end_date (str, optional): End date for temporal filtering in 'YYYY-MM-DD' format.
             Defaults to None.
     """
+
+    if(stac_source == "aws" and collection_name == "sentinel-2-l2a"):
+        band = map_band_name(band)
+
     temp_images = []
 
     merge_files = []
@@ -177,6 +181,10 @@ def merge_scene_provenance_cloud(sorted_data, cloud_sorted_data, scenes, collect
         end_date (str, optional): End date for temporal filtering in 'YYYY-MM-DD' format.
             Defaults to None.
     """
+
+    if(stac_source == "aws"):
+        band = map_band_name(band)
+
     temp_images = []
     provenance_temp_images = []
     temp_cloud_images = []
@@ -232,7 +240,7 @@ def merge_scene_provenance_cloud(sorted_data, cloud_sorted_data, scenes, collect
         image_filename = images[i].split('/')[-1].split('.')[0]
         parts = image_filename.split('_')
 
-        if (stac_source=="swissdatacube"):
+        if (stac_source=="swissdatacube" or stac_source == "aws"):
             date = parts[2]
         else:
             for part in parts:
@@ -293,7 +301,7 @@ def merge_scene_provenance_cloud(sorted_data, cloud_sorted_data, scenes, collect
                 )
 
             parts = image_filename.split('_')
-            if (stac_source=="swissdatacube"):
+            if (stac_source=="swissdatacube" or stac_source == "aws"):
                 date = parts[2]
             else:
                 for part in parts:

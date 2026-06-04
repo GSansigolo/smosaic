@@ -21,7 +21,7 @@ from smosaic.smosaic_merge_scene import merge_scene, merge_scene_provenance_clou
 from smosaic.smosaic_merge_tifs import merge_tifs
 from smosaic.smosaic_reproject_tif import reproject_tifs
 from smosaic.smosaic_spectral_indices import calculate_spectral_indices
-from smosaic.smosaic_utils import add_days_to_date, add_months_to_date, clean_dir, days_between_dates, get_all_cloud_configs, load_jsons
+from smosaic.smosaic_utils import add_days_to_date, add_months_to_date, clean_dir, days_between_dates, get_all_cloud_configs, load_jsons, map_band_name
 
 
 def mosaic(name, data_dir, stac_url, collection, output_dir, start_year, start_month, start_day, mosaic_method, stac_source="bdc", grid_crop=False, bands=None, reference_date=None, duration_days=None, end_year=None, end_month=None, end_day=None, duration_months=None, geom=None, grid=None, tile_id=None, bbox=None, profile=None, projection_output=4326):
@@ -111,7 +111,8 @@ def mosaic(name, data_dir, stac_url, collection, output_dir, start_year, start_m
         stac_source == "bdc" and collection == "S2_L2A-1" or 
         stac_source == "planetary-computer" and collection == "sentinel-2-l2a" or 
         stac_source == "digitalearth-africa" and collection == "s2_l2a" or 
-        stac_source == "swissdatacube" and collection == "s2_l2"):
+        stac_source == "swissdatacube" and collection == "s2_l2" or
+        stac_source == "aws" and collection == "sentinel-2-l2a"):
         pass
     else:
         print(f"{collection} collection of {stac_source} not yet supported.")
@@ -315,7 +316,6 @@ def process_period(period, mosaic_method, data_dir, collection_name, bands, bbox
                     (file_date := datetime.datetime.strptime(date_str, "%Y%m%d")) and
                     start_dt <= file_date <= end_dt
                 ]
-
                 for file in filtered_files:
                     files_list.append(dict(file=os.path.join(coll_data_dir, path, band, file)))        
 
@@ -327,6 +327,8 @@ def process_period(period, mosaic_method, data_dir, collection_name, bands, bbox
                 date, scene, band = parts[1].split('T')[0], parts[0].lstrip('T'), parts[2].split(".")[0]
             elif (stac_source == "swissdatacube" and collection_name == "s2_l2"):
                 date, scene, band = parts[2], parts[1], parts[3].split(".")[0]
+            elif (stac_source == "aws" and collection_name == "sentinel-2-l2a"):
+                date, scene, band = parts[2], parts[1], map_band_name(parts[3].split(".")[0]) 
             elif (stac_source == "bdc" and collection_name == "S2_L1C_BUNDLE-1" or 
                 stac_source == "bdc" and collection_name == "S2_L2A-1"):
                 date, scene, band = parts[2].split('T')[0], parts[5].lstrip('T'), parts[1]
@@ -360,11 +362,11 @@ def process_period(period, mosaic_method, data_dir, collection_name, bands, bbox
             sorted_data = sorted(band_list, key=lambda x: x['distance_days'])
 
             cloud_sorted_data = sorted(cloud_list, key=lambda x: x['distance_days'])
-
+        
         reproject_data = reproject_tifs(sorted_data=sorted_data, cloud_sorted_data=cloud_sorted_data, data_dir=data_dir, projection_output=projection_output)
         sorted_data = reproject_data['reprojected_images']
         cloud_sorted_data = reproject_data['reprojected_cloud_images']
-
+        
         if (i==0):
             ordered_lists = merge_scene_provenance_cloud(sorted_data, cloud_sorted_data, scenes, collection_name, bands[i], data_dir, stac_source, start_date, end_date)
         else:

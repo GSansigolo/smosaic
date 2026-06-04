@@ -20,9 +20,9 @@
    :align: center
    :alt: smosaic logo
 
-====================================================================================
-Simple python package for creating satellite image mosaics based on Brazil Data Cube
-====================================================================================
+=============================================================================================
+Create Analysis-Ready Data (ARD) seamless satellite image mosaics directly from STAC catalogs
+=============================================================================================
 
 
 .. image:: https://img.shields.io/badge/License-GPLv3-blue.svg
@@ -58,7 +58,7 @@ Simple python package for creating satellite image mosaics based on Brazil Data 
 About
 =====
 
-Simple python package for creating satellite image mosaics based on Brazil Data Cube
+smosaic is a free and open-source tool for building Analysis-Ready Data (ARD) seamless satellite image mosaics directly from STAC, designed for analysts without deep programming knowledge. The system connects to STAC catalogs from Brazil Data Cube (BDC), Digital Earth Africa, Swiss Data Cube, Amazon Web Services (AWS) and Microsoft Planetary Computer, and can incorporate more catalogs.
 
 
 Installation

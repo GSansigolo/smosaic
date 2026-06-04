@@ -38,6 +38,7 @@ notebooks/S2C_SCL_*
 notebooks/S2B_SCL_*
 notebooks/S2A_SCL_*
 notebooks/sentinel-2-l2a
+notebooks/ms-sentinel-2-l2a
 notebooks/s2_l2a
 notebooks/s2_l2
 *.zip

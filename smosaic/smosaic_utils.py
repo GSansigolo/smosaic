@@ -45,7 +45,13 @@ CLOUD_CONFIG = {
         'non_cloud_values': [4, 5, 6, 11], #11-snow
         'cloud_values': [0, 1, 2, 3, 7, 8, 9, 10],
         'no_data_value': 0
-    }
+    },
+    'AWS:sentinel-2-l2a': {
+        'cloud_band': 'scl',
+        'non_cloud_values': [4, 5, 6],
+        'cloud_values': [0, 1, 2, 3, 7, 8, 9, 10, 11],
+        'no_data_value': 0
+    },
 }
 
 COVERAGE_PROJ = pyproj.CRS.from_wkt('''
@@ -72,6 +78,16 @@ COVERAGE_PROJ = pyproj.CRS.from_wkt('''
 
 # Cache for loaded JSON data
 _json_cache = {}
+
+def map_band_name(band_name):
+    
+    color_map = {
+        "B02": "blue",
+        "B03": "green",
+        "B04": "red"
+    }
+    
+    return color_map.get(band_name, band_name)
 
 def load_json_config(file_path: str, use_cache: bool = True) -> Dict[str, Any]:
     """
