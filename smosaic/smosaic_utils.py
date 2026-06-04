@@ -39,6 +39,12 @@ CLOUD_CONFIG = {
         'non_cloud_values': [4, 5, 6],
         'cloud_values': [0, 1, 2, 3, 7, 8, 9, 10, 11],
         'no_data_value': 0
+    },
+    'SWISSDATACUBE:s2_l2': {
+        'cloud_band': 'SCL',
+        'non_cloud_values': [4, 5, 6, 11], #11-snow
+        'cloud_values': [0, 1, 2, 3, 7, 8, 9, 10],
+        'no_data_value': 0
     }
 }
 

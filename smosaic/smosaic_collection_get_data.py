@@ -8,7 +8,7 @@ import requests
 from smosaic.smosaic_download_stream import download_stream
 from smosaic.smosaic_utils import get_all_cloud_configs
 
-def collection_get_data(stac, datacube, data_dir, stac_source, token):
+def collection_get_data(stac, datacube, data_dir, stac_source):
     """
     Fetch and download data from a STAC collection based on specified parameters.
     
@@ -60,7 +60,10 @@ def collection_get_data(stac, datacube, data_dir, stac_source, token):
             tile = item.properties.get("title").split("_")[5][1:]
             if tile not in tiles:
                 tiles.append(tile)
-            
+        if (stac_source == "swissdatacube" and collection == "s2_l2"):
+            tile = str(item.assets['B01'].href).split("/")[6].split("_")[1]
+            if tile not in tiles:
+                tiles.append(tile)
     if(stac_source=="bdc" and collection=="S2_L1C_BUNDLE-1"):
         code = stac_source.upper()+":"+collection
         bands = datacube['bands'] + [cloud_dict[code]['cloud_band']]
@@ -97,6 +100,8 @@ def collection_get_data(stac, datacube, data_dir, stac_source, token):
                     tile = item.id.split("_")[4][1:]
                 elif (stac_source == "digitalearth-africa" and collection == "s2_l2a"):
                     tile = item.properties.get("title").split("_")[5][1:]
+                elif (stac_source == "swissdatacube" and collection == "s2_l2"):
+                    tile = str(item.assets['B01'].href).split("/")[6].split("_")[1]
 
                 if (stac_source=="planetary-computer"):
                     response = requests.get(item.assets[band].href+"?"+sas_token, stream=True)
@@ -118,7 +123,9 @@ def collection_get_data(stac, datacube, data_dir, stac_source, token):
 
                     if(stac_source == "digitalearth-africa" and collection == "s2_l2a"):
                         os.rename(os.path.join(data_dir+"/"+collection+"/"+tile+"/"+band, os.path.basename(item.assets[band].href)), os.path.join(data_dir+"/"+collection+"/"+tile+"/"+band,item.properties.get("title").split("_T")[1]+"_"+os.path.basename(item.assets[band].href)))
-        
+                    elif(stac_source == "swissdatacube" and collection == "s2_l2"):
+                        os.rename(os.path.join(data_dir+"/"+collection+"/"+tile+"/"+band, os.path.basename(item.assets[band].href)), os.path.join(data_dir+"/"+collection+"/"+tile+"/"+band,str(item.assets['B01'].href).split("/")[6]+"_"+os.path.basename(item.assets[band].href)))
+           
     if(download):
         file_name = collection+".json"
         with open(os.path.join(data_dir+"/"+collection+"/"+file_name), 'w') as json_file:

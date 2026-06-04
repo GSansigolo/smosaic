@@ -81,7 +81,7 @@ def merge_scene(sorted_data, cloud_sorted_data, scenes, collection_name, band, d
 
     for scene in scenes:
         
-        for i in range(0, min(len(images), 4)):
+        for i in range(0, min(len(images), 3)):
 
             images =  [item['file'] for item in sorted_data if item.get("scene") == scene]
 
@@ -231,10 +231,14 @@ def merge_scene_provenance_cloud(sorted_data, cloud_sorted_data, scenes, collect
 
         image_filename = images[i].split('/')[-1].split('.')[0]
         parts = image_filename.split('_')
-        for part in parts:
-            if part[0:4].isdigit() and len(part) >= 9 and part[8] == 'T':
-                date = part.split('T')[0]
-                break
+
+        if (stac_source=="swissdatacube"):
+            date = parts[2]
+        else:
+            for part in parts:
+                if part[0:4].isdigit() and len(part) >= 9 and part[8] == 'T':
+                    date = part.split('T')[0]
+                    break
 
         datatime_image = datetime.datetime.strptime(date, "%Y%m%d")
         day_of_year = datatime_image.timetuple().tm_yday
@@ -268,7 +272,7 @@ def merge_scene_provenance_cloud(sorted_data, cloud_sorted_data, scenes, collect
 
     for scene in scenes:
         
-        for i in range(0, min(len(images), 4)):
+        for i in range(0, min(len(images), 3)):
 
             images =  [item['file'] for item in sorted_data if item.get("scene") == scene]
             cloud_images = [item['file'] for item in cloud_sorted_data if item.get("scene") == scene]
@@ -289,10 +293,13 @@ def merge_scene_provenance_cloud(sorted_data, cloud_sorted_data, scenes, collect
                 )
 
             parts = image_filename.split('_')
-            for part in parts:
-                if part[0:4].isdigit() and len(part) >= 9 and part[8] == 'T':
-                    date = part.split('T')[0]
-                    break
+            if (stac_source=="swissdatacube"):
+                date = parts[2]
+            else:
+                for part in parts:
+                    if part[0:4].isdigit() and len(part) >= 9 and part[8] == 'T':
+                        date = part.split('T')[0]
+                        break
 
             datatime_image = datetime.datetime.strptime(date, "%Y%m%d")
             day_of_year = datatime_image.timetuple().tm_yday

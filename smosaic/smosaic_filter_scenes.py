@@ -23,7 +23,8 @@ def filter_scenes(collection, data_dir, geom, stac_source=None):
     if (stac_source == "bdc" and collection == "S2_L1C_BUNDLE-1" or  
         stac_source == "bdc" and collection == "S2_L2A-1" or 
         stac_source == "planetary-computer" and collection == "sentinel-2-l2a" or 
-        stac_source == "digitalearth-africa" and collection == "s2_l2a"):
+        stac_source == "digitalearth-africa" and collection == "s2_l2a" or 
+        stac_source == "swissdatacube" and collection == "s2_l2"):
         grid_data = find_grid_by_name("MGRS")
     
     list_dir = [item for item in os.listdir(os.path.join(data_dir, collection))
