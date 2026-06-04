@@ -20,9 +20,9 @@
    :align: center
    :alt: smosaic logo
 
-===========================================================================
-Building Seamless Satellite Image Mosaics from SpatioTemporal Asset Catalog
-===========================================================================
+==================================================================
+Seamless Satellite Image Mosaics from SpatioTemporal Asset Catalog
+==================================================================
 
 
 .. image:: https://img.shields.io/badge/License-GPLv3-blue.svg
