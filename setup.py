@@ -24,7 +24,7 @@ setup(
             "smosaic=smosaic.cli:cli",
         ],
     },
-    description='Simple python package for creating satellite image mosaics based on Brazil Data Cube',
+    description='Seamless Satellite Image Mosaics from SpatioTemporal Asset Catalog',
     author='Gabriel Sansigolo',
     author_email = "gabrielsansigolo@gmail.com",
     url = "https://github.com/brazil-data-cube/smosaic",
