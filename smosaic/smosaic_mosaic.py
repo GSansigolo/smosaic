@@ -241,7 +241,6 @@ def mosaic(name, data_dir, stac_url, collection, output_dir, start_year, start_m
     #create_composition_json(output_dir=output_dir, collection=collection, input_scenes=scenes, ignored_scenes=[], used_scenes=[])
 
     clean_dir(data_dir)
-    #clean_dir(output_dir)
 
 
 def process_period(period, mosaic_method, data_dir, collection_name, bands, bbox, output_dir, duration_days, duration_months, name, geom, reference_date, projection_output, grid, tile_id, stac_source):

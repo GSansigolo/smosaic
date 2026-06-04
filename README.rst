@@ -20,9 +20,9 @@
    :align: center
    :alt: smosaic logo
 
-=============================================================================================
-Create Analysis-Ready Data (ARD) seamless satellite image mosaics directly from STAC catalogs
-=============================================================================================
+===========================================================================
+Building Seamless Satellite Image Mosaics from SpatioTemporal Asset Catalog
+===========================================================================
 
 
 .. image:: https://img.shields.io/badge/License-GPLv3-blue.svg
