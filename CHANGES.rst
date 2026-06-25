@@ -19,6 +19,18 @@
 Changes
 =======
 
+0.8.0 (2026-07-25)
+------------------
+* **Microsoft Planetary Computer Integration**: Added full support for Sentinel-2 data hosted on the Microsoft Planetary Computer STAC API.  🛰️
+* **Digital Earth Africa Integration**: Introduced direct compatibility with Digital Earth Africa STAC endpoints to effortlessly query, filter, and download Sentinel-2 imagery.  🛰️
+* **Swiss Data Cube Support**: Expanded multi-source STAC capabilities by integrating the Swiss Data Cube catalog, allowing users to build precise Sentinel-2 mosaics utilizing Swiss data cube.  🛰️
+* **AWS Open Data Registry**: Implemented comprehensive support for Earth Search (AWS) STAC endpoints to reliably access and process Sentinel-2 Cloud-Optimized GeoTIFFs (COGs) 🛰️
+* **New Provider Example Notebooks**:  Added experimental Jupyter notebooks for function demonstrations:
+    * ``smosaic-planetary-computer.ipynb``: A comprehensive experiment on generating high-resolution image mosaics utilizing the Microsoft Planetary Computer STAC catalog.
+    * ``smosaic-digital-earth-africa.ipynb``: A comprehensive experiment on generating image mosaics using Digital Earth Africa.
+    * ``smosaic-swiss-data-cube.ipynb``: An comprehensive experiment demonstrating how to generate image mosaics using the Swiss Data Cube.
+    * ``smosaic-aws.ipynb``: A comprehensive experiment on generating image mosaics utilizing the AWS Open Data STAC API endpoints.
+
 0.7.0 (2026-02-03)
 ------------------
 
@@ -28,7 +40,7 @@ Changes
 * **Filter_scenes Function**: Redesigned the ``filter_scenes`` function now use the geometry of grid or bbox to filter the downloaded images for scenes that intersect mosaic region.
 * **Mosaic Generation Algorithm Refactor**: Completely refactored the ``merge_scene()`` function, implementing a new merging logic based on NumPy arrays and binary mask filling to improve mosaic composition.
 * **New Example Notebook**: Added experimental Jupyter notebooks for function demonstrations:
-    * ``smosaic-introduction``: Example of creating RGB mosaics  on the BDC_SM_V2 grid for a tile in Mato Grosso state
+    * ``smosaic-introduction.ipynb``: Example of creating RGB mosaics  on the BDC_SM_V2 grid for a tile in Mato Grosso state
 * **Documentation**: Added comprehensive Sphinx documentation with API reference for all functions, usage examples, and detailed parameter descriptions.
 * **Command Line Interface**: Added a CLI (Command Line Interface) using Click framework, providing command-line access to mosaic generation with configurable options.
 
@@ -49,9 +61,9 @@ Changes
     * ``savi``: Soil-Adjusted Vegetation Index
     * ``ndbi``: Normalized Difference Built-up Index
 * **New Example Notebooks**: Added experimental Jupyter notebooks for article demonstrations:
-    * ``smosaic-introduction``: Example of creating RGB mosaics for a scene in Pará state
-    * ``smosaic-bdc-favelas-sp``: Experiment on generating image mosaics for monitoring favelas in São Paulo state
-    * ``smosaic-agricultural-monitoring-pr``: Experiment on generating image mosaics for agricultural monitoring in Paraná state
+    * ``smosaic-introduction.ipynb``: Example of creating RGB mosaics for a scene in Pará state
+    * ``smosaic-bdc-favelas-sp.ipynb``: Experiment on generating image mosaics for monitoring favelas in São Paulo state
+    * ``smosaic-agricultural-monitoring-pr.ipynb``: Experiment on generating image mosaics for agricultural monitoring in Paraná state
 * **Sentinel-2/MSI Level-1C**: Added full support for S2_L1C_BUNDLE-1 data.  🛰️
 * **Fmask external cloud support**: Added support for Fmask (algorithm for detecting clouds and cloud shadows).
 

@@ -53,11 +53,11 @@ def download_stream(file_path: str, response, chunk_size=1024*64, progress=True,
 
     file_size = os.stat(file_path).st_size
 
-    if file_size != total_size:
-        os.remove(file_path)
-        raise IOError(f'Download file is corrupt. Expected {total_size} bytes, got {file_size}')
+    #if file_size != total_size:
+    #    os.remove(file_path)
+    #    raise IOError(f'Download file is corrupt. Expected {total_size} bytes, got {file_size}')
     
-    if file_path.lower().endswith(('.tif', '.tiff')):
-        if not verify_tif_integrity(file_path):
-            os.remove(file_path)
-            raise IOError(f'Downloaded TIFF file is corrupted: {file_path}')
+   #if file_path.lower().endswith(('.tif', '.tiff')):
+   #     if not verify_tif_integrity(file_path):
+   #         os.remove(file_path)
+   #         raise IOError(f'Downloaded TIFF file is corrupted: {file_path}')

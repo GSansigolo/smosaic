@@ -6,10 +6,9 @@ import shutil
 import requests
 
 from smosaic.smosaic_download_stream import download_stream
-from smosaic.smosaic_utils import get_all_cloud_configs
+from smosaic.smosaic_utils import get_all_cloud_configs, map_band_name
 
-
-def collection_get_data(stac, datacube, data_dir):
+def collection_get_data(stac, datacube, data_dir, stac_source):
     """
     Fetch and download data from a STAC collection based on specified parameters.
     
@@ -31,7 +30,8 @@ def collection_get_data(stac, datacube, data_dir):
     if(collection=="S2_L1C_BUNDLE-1"):
         bands = "asset"
     else:
-        bands = datacube['bands'] + [cloud_dict[collection]['cloud_band']]
+        code = stac_source.upper()+":"+collection
+        bands = datacube['bands'] + [cloud_dict[code]['cloud_band']]
 
     if (datacube['bbox']):
         item_search = stac.search(
@@ -41,24 +41,38 @@ def collection_get_data(stac, datacube, data_dir):
         )
 
     tiles = []
+
     for item in item_search.items():
-        if (collection=="S2_L1C_BUNDLE-1"):
+        if (stac_source=="bdc" and collection=="S2_L1C_BUNDLE-1" or
+            stac_source=="bdc" and collection=="S2_L2A-1"):
             tile = item.id.split("_")[5][1:]
             if tile not in tiles:
                 tiles.append(tile)
-        if (collection=="S2_L2A-1"):
-            tile = item.id.split("_")[5][1:]
-            if tile not in tiles:
-                tiles.append(tile)
-        if (collection=="S2-16D-2"):
+        elif (stac_source=="bdc" and collection=="S2-16D-2"):
             tile = item.id.split("_")[2]
             if tile not in tiles:
                 tiles.append(tile)
+        elif (stac_source=="planetary-computer" and collection=="sentinel-2-l2a"):
+            tile = item.id.split("_")[4][1:]
+            if tile not in tiles:
+                tiles.append(tile)
+        elif (stac_source == "digitalearth-africa" and collection == "s2_l2a"):
+            tile = item.properties.get("title").split("_")[5][1:]
+            if tile not in tiles:
+                tiles.append(tile)
+        elif (stac_source == "swissdatacube" and collection == "s2_l2"):
+            tile = str(item.assets['B01'].href).split("/")[6].split("_")[1]
+            if tile not in tiles:
+                tiles.append(tile)
+        elif (stac_source == "aws" and collection == "sentinel-2-l2a"):
+            tile = item.id.split("_")[1]
+            if tile not in tiles:
+                tiles.append(tile)
+    if(stac_source=="bdc" and collection=="S2_L1C_BUNDLE-1"):
+        code = stac_source.upper()+":"+collection
+        bands = datacube['bands'] + [cloud_dict[code]['cloud_band']]
 
-    if(collection=="S2_L1C_BUNDLE-1"):
-        bands = datacube['bands'] + [cloud_dict[collection]['cloud_band']]
-
-    for tile in tiles:      
+    for tile in tiles:
         if not os.path.exists(data_dir+"/"+collection+"/"+tile):
             os.makedirs(data_dir+"/"+collection+"/"+tile)
         for band in bands:
@@ -69,33 +83,63 @@ def collection_get_data(stac, datacube, data_dir):
     download = False
 
     for item in tqdm.tqdm(desc='Downloading... ', unit=" itens", total=item_search.matched(), iterable=item_search.items()):
-        if (collection=="S2_L1C_BUNDLE-1"):
+
+        if (stac_source=="planetary-computer"):
+            url = f"https://planetarycomputer.microsoft.com/api/sas/v1/token/{collection}"
+            response = requests.get(url)
+            sas_token = response.json()["token"]
+
+        if (stac_source=="bdc" and collection=="S2_L1C_BUNDLE-1"):
             tile = item.id.split("_")[5][1:]
             band = 'asset'
             response = requests.get(item.assets[band].href, stream=True)
             download = True
             download_stream(os.path.join(data_dir+"/"+collection+"/"+tile, os.path.basename(item.assets[band].href)), response, total_size=item.to_dict()['assets'][band]["bdc:size"])
+
         else:
             for band in bands:
-                if (collection=="S2_L2A-1"):
+                if (stac_source=="bdc" and collection=="S2_L2A-1"):
                     tile = item.id.split("_")[5][1:]
-                if (collection=="S2-16D-2"):
-                    tile = item.id.split("_")[2]
-                response = requests.get(item.assets[band].href, stream=True)
+                elif (stac_source=="planetary-computer" and collection=="sentinel-2-l2a"):
+                    tile = item.id.split("_")[4][1:]
+                elif (stac_source == "digitalearth-africa" and collection == "s2_l2a"):
+                    tile = item.properties.get("title").split("_")[5][1:]
+                elif (stac_source == "swissdatacube" and collection == "s2_l2"):
+                    tile = str(item.assets['B01'].href).split("/")[6].split("_")[1]
+                elif (stac_source == "aws" and collection == "sentinel-2-l2a"):
+                    tile = item.id.split("_")[1]
+
+                if (stac_source=="planetary-computer"):
+                    response = requests.get(item.assets[band].href+"?"+sas_token, stream=True)
+                elif(stac_source=="digitalearth-africa"):
+                    https_url = item.assets[band].href.replace(
+                        "s3://deafrica-sentinel-2/", 
+                        "https://deafrica-sentinel-2.s3.af-south-1.amazonaws.com/"
+                    )
+                    response = requests.get(https_url, stream=True)
+                else:
+                    response = requests.get(item.assets[band].href, stream=True)
                 if not any(tile_dict["tile"] == tile for tile_dict in geom_map):
                     geom_map.append(dict(tile=tile, geometry=item.geometry))
                 if(os.path.exists(os.path.join(data_dir+"/"+collection+"/"+tile+"/"+band, os.path.basename(item.assets[band].href)))):
                     download = False
                 else:
                     download = True
-                    download_stream(os.path.join(data_dir+"/"+collection+"/"+tile+"/"+band, os.path.basename(item.assets[band].href)), response, total_size=item.to_dict()['assets'][band]["bdc:size"])
-        
+                    download_stream(os.path.join(data_dir+"/"+collection+"/"+tile+"/"+band, os.path.basename(item.assets[band].href)), response, total_size=None) #item.to_dict()['assets'][band]["bdc:size"]
+
+                    if(stac_source == "digitalearth-africa" and collection == "s2_l2a"):
+                        os.rename(os.path.join(data_dir+"/"+collection+"/"+tile+"/"+band, os.path.basename(item.assets[band].href)), os.path.join(data_dir+"/"+collection+"/"+tile+"/"+band,item.properties.get("title").split("_T")[1]+"_"+os.path.basename(item.assets[band].href)))
+                    elif(stac_source == "swissdatacube" and collection == "s2_l2"):
+                        os.rename(os.path.join(data_dir+"/"+collection+"/"+tile+"/"+band, os.path.basename(item.assets[band].href)), os.path.join(data_dir+"/"+collection+"/"+tile+"/"+band,str(item.assets['B01'].href).split("/")[6]+"_"+os.path.basename(item.assets[band].href)))
+                    elif(stac_source == "aws" and collection == "sentinel-2-l2a"):
+                        os.rename(os.path.join(data_dir+"/"+collection+"/"+tile+"/"+band, os.path.basename(item.assets[band].href)), os.path.join(data_dir+"/"+collection+"/"+tile+"/"+band,item.id.split("_")[0]+"_"+item.id.split("_")[1]+"_"+item.id.split("_")[2]+"_"+os.path.basename(item.assets[band].href)))
+                   
     if(download):
         file_name = collection+".json"
         with open(os.path.join(data_dir+"/"+collection+"/"+file_name), 'w') as json_file:
             json.dump(dict(collection=collection, geoms=geom_map), json_file, indent=4)
 
-    if (collection=="S2_L1C_BUNDLE-1"):
+    if (stac_source=="bdc" and collection=="S2_L1C_BUNDLE-1"):
         for tile in tiles:
                 tile_path = os.path.join(data_dir+"/"+collection+"/"+tile)
                 pattern_zip = r'\.zip$'

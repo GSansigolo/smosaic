@@ -37,6 +37,11 @@ notebooks/band_non_clear_*
 notebooks/S2C_SCL_*
 notebooks/S2B_SCL_*
 notebooks/S2A_SCL_*
+notebooks/sentinel-2-l2a
+notebooks/ms-sentinel-2-l2a
+notebooks/aws-sentinel-2-l2a
+notebooks/s2_l2a
+notebooks/s2_l2
 *.zip
 S2_L2A-1
 clear_*

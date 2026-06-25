@@ -10,7 +10,7 @@ from shapely.ops import transform
 
 from smosaic.smosaic_utils import find_grid_by_name, get_coverage_projection, load_jsons
 
-def filter_scenes(collection, data_dir, geom):
+def filter_scenes(collection, data_dir, geom, stac_source=None):
     """
     Filter and select specific scenes from a collection based on spatial criteria.
     
@@ -19,7 +19,13 @@ def filter_scenes(collection, data_dir, geom):
         data_dir (str): Directory path where scene data is stored.
         clip_geometry (shapely.geometry): Spatial boundary for clipping.
     """
-    if collection in ['S2_L2A-1','S2_L1C_BUNDLE-1']:
+    
+    if (stac_source == "bdc" and collection == "S2_L1C_BUNDLE-1" or  
+        stac_source == "bdc" and collection == "S2_L2A-1" or 
+        stac_source == "planetary-computer" and collection == "sentinel-2-l2a" or 
+        stac_source == "digitalearth-africa" and collection == "s2_l2a" or 
+        stac_source == "swissdatacube" and collection == "s2_l2" or
+        stac_source == "aws" and collection == "sentinel-2-l2a"):
         grid_data = find_grid_by_name("MGRS")
     
     list_dir = [item for item in os.listdir(os.path.join(data_dir, collection))
@@ -28,10 +34,10 @@ def filter_scenes(collection, data_dir, geom):
     filtered_scenes = []
     
     for scene in list_dir:
-        item = [item for item in grid_data["features"] if item["properties"]["name"] == scene]
+        item = [item for item in grid_data["features"] if item["properties"]["tile"] == scene]
         if item:
             grid_geom = shapely.geometry.shape(item[0]['geometry'])
             if geom.intersects(grid_geom):
-                filtered_scenes.append(item[0]['properties']['name'])
+                filtered_scenes.append(item[0]['properties']['tile'])
     
     return filtered_scenes

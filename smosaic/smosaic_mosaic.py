@@ -21,48 +21,54 @@ from smosaic.smosaic_merge_scene import merge_scene, merge_scene_provenance_clou
 from smosaic.smosaic_merge_tifs import merge_tifs
 from smosaic.smosaic_reproject_tif import reproject_tifs
 from smosaic.smosaic_spectral_indices import calculate_spectral_indices
-from smosaic.smosaic_utils import add_days_to_date, add_months_to_date, clean_dir, days_between_dates, get_all_cloud_configs, load_jsons
+from smosaic.smosaic_utils import add_days_to_date, add_months_to_date, clean_dir, days_between_dates, get_all_cloud_configs, load_jsons, map_band_name
 
 
-def mosaic(name, data_dir, stac_url, collection, output_dir, start_year, start_month, start_day, mosaic_method, grid_crop=False, bands=None, reference_date=None, duration_days=None, end_year=None, end_month=None, end_day=None, duration_months=None, geom=None, grid=None, tile_id=None, bbox=None, profile=None, projection_output=4326):
+def mosaic(name, data_dir, stac_url, collection, output_dir, start_year, start_month, start_day, mosaic_method, stac_source="bdc", grid_crop=False, bands=None, reference_date=None, duration_days=None, end_year=None, end_month=None, end_day=None, duration_months=None, geom=None, grid=None, tile_id=None, bbox=None, profile=None, projection_output=4326):
     """
-    Create satellite image mosaics using Brazil Data Cube collections.
-    
-    This function generates temporal composites from Brazil Data Cube STAC collections by applying
-    specified mosaic composition function over defined time periods and spatial extents. It supports BDC's
-    grid systems, diferent projections, and composition function.
+    Create Analysis-Ready Data (ARD) seamless satellite image mosaics directly from STAC catalogs.
+
+    This function generates temporal composites by applying specified mosaic composition functions over 
+    defined time periods and spatial extents. The system connects to STAC catalogs from the 
+    Brazil Data Cube (BDC), Digital Earth Africa, Swiss Data Cube, and Microsoft Planetary Computer.
     
     Args:
         name (str): Descriptive identifier for the output mosaic (used in file naming).
         data_dir (str): Directory for storing intermediate data and processing artifacts.
-        stac_url (str): Brazil Data Cube STAC API endpoint URL (e.g., "https://data.inpe.br/bdc/stac/v1").
-        collection (str): BDC collection identifier (e.g., "S2_L2A-1").
+        stac_url (str): STAC API endpoint URL (e.g., "https://data.inpe.br/bdc/stac/v1").
+        collection (str): STAC collection identifier (e.g., "S2_L2A-1").
         output_dir (str): Destination directory for final mosaic products.
         start_year (int): Initial year for temporal filtering (YYYY format).
         start_month (int): Initial month for temporal filtering (1-12).
         start_day (int): Initial day for temporal filtering (1-31).
         mosaic_method (str): Mosaic composition function. Supported methods include:
             - "lcf": Least Cloud-cover First - order by the least cloud-cover.
-            - "chrono": Chronological - order chronologicaly.
+            - "chrono": Chronological - order chronologically.
             - "ctd": Closest to Date - order by the closest image to reference date.
-        grid_crop (bool, optional): Enable cropping to BDC grid tile boundaries. Defaults to False.
+        stac_source (str, optional): The source STAC catalog ecosystem. Supported sources include:
+            - "bdc": Brazil Data Cube (default)
+            - "planetary-computer": Microsoft Planetary Computer
+            - "digitalearth-africa": Digital Earth Africa
+            - "swissdatacube": Swiss Data Cube
+            Defaults to "bdc".
+        grid_crop (bool, optional): Enable cropping to grid tile boundaries. Defaults to False.
         bands (list, optional): Spectral bands to include (e.g., ["B02","B03","B04","B8A"]).
         reference_date (str, optional): Reference date for the Closest to Date composition function. 
             (format: 'YYYY-MM-DD').
-        duration_days (int, optional): Temporal window length in days from start date (day/month/year). 
+        duration_days (int, optional): Temporal window length in days from start date. 
         end_year (int, optional): Explicit end year for temporal range (YYYY format). Defaults to None.
         end_month (int, optional): Explicit end month for temporal range (1-12). Defaults to None.
         end_day (int, optional): Explicit end day for temporal range (1-31). Defaults to None.
-        duration_months (int, optional): Temporal window length in months  from start date (day/month/year).
+        duration_months (int, optional): Temporal window length in months from start date.
         geom (str/dict, optional): GeoJSON geometry defining Area of Interest (AOI).
             Defaults to None.
-        grid (str, optional): BDC grid system identifier. Supported grids include:
+        grid (str, optional): Grid system identifier. Supported grids include:
             - "BDC_SM_V2": Brazil Data Cube Small Grid.
             Defaults to None.
-        tile_id (str, optional): BDC grid tile identifier (6-digit code, e.g., "020019"). 
+        tile_id (str, optional): Grid tile identifier (e.g., 6-digit code "020019"). 
             Requires grid parameter. Defaults to None.
         bbox (list/tuple, optional): Bounding box coordinates [min_lon, min_lat, max_lon, max_lat].
-        profile (dict, optional): Profile band and spectral indices: selector.
+        profile (dict, optional): Profile band and spectral indices selector.
             Overrides bands parameters (e.g., "urban_analysis" or "crop_condition").
         projection_output (int/str, optional): Output coordinate reference system. Options:
             - EPSG codes: 4326 (WGS84), 5880 (SIRGAS 2000 Brazil Polyconic)
@@ -100,9 +106,17 @@ def mosaic(name, data_dir, stac_url, collection, output_dir, start_year, start_m
 
     stac = pystac_client.Client.open(stac_url)
 
-    if collection not in ['S2_L2A-1','S2_L1C_BUNDLE-1']: #'S2-16D-2'
-        return print(f"{collection['collection']} collection not yet supported.")
-    
+
+    if (stac_source == "bdc" and collection == "S2_L1C_BUNDLE-1" or  
+        stac_source == "bdc" and collection == "S2_L2A-1" or 
+        stac_source == "planetary-computer" and collection == "sentinel-2-l2a" or 
+        stac_source == "digitalearth-africa" and collection == "s2_l2a" or 
+        stac_source == "swissdatacube" and collection == "s2_l2" or
+        stac_source == "aws" and collection == "sentinel-2-l2a"):
+        pass
+    else:
+        print(f"{collection} collection of {stac_source} not yet supported.")
+        
     # grid
     if (grid != None and tile_id!= None):
         if (grid == "br_states"):
@@ -203,13 +217,13 @@ def mosaic(name, data_dir, stac_url, collection, output_dir, start_year, start_m
     collection_name = dict_collection['collection']
 
     if not os.path.exists(data_dir+"/"+collection):
-        collection_get_data(stac, dict_collection, data_dir=data_dir)
+        collection_get_data(stac, dict_collection, data_dir=data_dir, stac_source=stac_source)
 
     num_processes = multiprocessing.cpu_count()
 
     args_for_processes = [
         (period, mosaic_method, data_dir, collection_name, bands, bbox, output_dir, 
-         duration_days, duration_months, name, geom, reference_date, projection_output, grid, tile_id) 
+         duration_days, duration_months, name, geom, reference_date, projection_output, grid, tile_id, stac_source) 
         for period in periods
     ]
 
@@ -227,10 +241,9 @@ def mosaic(name, data_dir, stac_url, collection, output_dir, start_year, start_m
     #create_composition_json(output_dir=output_dir, collection=collection, input_scenes=scenes, ignored_scenes=[], used_scenes=[])
 
     clean_dir(data_dir)
-    #clean_dir(output_dir)
 
 
-def process_period(period, mosaic_method, data_dir, collection_name, bands, bbox, output_dir, duration_days, duration_months, name, geom, reference_date, projection_output, grid, tile_id):
+def process_period(period, mosaic_method, data_dir, collection_name, bands, bbox, output_dir, duration_days, duration_months, name, geom, reference_date, projection_output, grid, tile_id, stac_source):
 
     start_date = period['start']
     end_date = period['end']
@@ -249,11 +262,12 @@ def process_period(period, mosaic_method, data_dir, collection_name, bands, bbox
         band_list = []             
         sorted_data = []
 
-        bands_cloud = [bands[i]] + [cloud_dict[collection_name]['cloud_band']]
+        code = stac_source.upper()+":"+collection_name
+        bands_cloud = [bands[i]] + [cloud_dict[code]['cloud_band']]
         
-        scenes = filter_scenes(collection_name, data_dir, geom)
+        scenes = filter_scenes(collection_name, data_dir, geom, stac_source)
 
-        cloud = cloud_dict[collection_name]['cloud_band']
+        cloud = cloud_dict[code]['cloud_band']
 
         for path in scenes:
 
@@ -269,20 +283,21 @@ def process_period(period, mosaic_method, data_dir, collection_name, bands, bbox
                 (file_date := datetime.datetime.strptime(date_str, "%Y%m%d")) and
                 start_dt <= file_date <= end_dt
             ]
-
+            
             for file in filtered_files:
                 date_match = re.search(r'\d{8}', file)
                 date_str = date_match.group()
                 date = datetime.datetime.strptime(date_str, "%Y%m%d")
                 if (reference_date):
                     distance_days = days_between_dates(reference_date, file.split("_")[2].split('T')[0])
-                    pixel_count = count_pixels(os.path.join(coll_data_dir, path, cloud_dict[collection_name]['cloud_band'], file), cloud_dict[collection_name]['non_cloud_values'], geom) 
+                    pixel_count = count_pixels(os.path.join(coll_data_dir, path, cloud_dict[code]['cloud_band'], file), cloud_dict[code]['non_cloud_values'], geom) 
                     cloud_list.append(dict(band=cloud, date=date.strftime("%Y%m%d"), distance_days=distance_days, clean_percentage=float(pixel_count['count']/pixel_count['total']), scene=path, file='')) 
                     band_list.append(dict(band=bands[i], date=date.strftime("%Y%m%d"), distance_days=distance_days, clean_percentage=float(pixel_count['count']/pixel_count['total']), scene=path, file=''))
                 else:
-                    pixel_count = count_pixels(os.path.join(coll_data_dir, path, cloud_dict[collection_name]['cloud_band'], file), cloud_dict[collection_name]['non_cloud_values'], geom)
-                    cloud_list.append(dict(band=cloud, date=date.strftime("%Y%m%d"), clean_percentage=float(pixel_count['count']/pixel_count['total']), scene=path, file=''))
-                    band_list.append(dict(band=bands[i], date=date.strftime("%Y%m%d"), clean_percentage=float(pixel_count['count']/pixel_count['total']), scene=path, file=''))
+                    pixel_count = count_pixels(os.path.join(coll_data_dir, path, cloud_dict[code]['cloud_band'], file), cloud_dict[code]['non_cloud_values'], geom)
+                    if (pixel_count['total']):
+                        cloud_list.append(dict(band=cloud, date=date.strftime("%Y%m%d"), clean_percentage=float(pixel_count['count']/pixel_count['total']), scene=path, file=''))
+                        band_list.append(dict(band=bands[i], date=date.strftime("%Y%m%d"), clean_percentage=float(pixel_count['count']/pixel_count['total']), scene=path, file=''))
 
         files_list = []
 
@@ -300,7 +315,6 @@ def process_period(period, mosaic_method, data_dir, collection_name, bands, bbox
                     (file_date := datetime.datetime.strptime(date_str, "%Y%m%d")) and
                     start_dt <= file_date <= end_dt
                 ]
-
                 for file in filtered_files:
                     files_list.append(dict(file=os.path.join(coll_data_dir, path, band, file)))        
 
@@ -308,10 +322,19 @@ def process_period(period, mosaic_method, data_dir, collection_name, bands, bbox
         for f in files_list:
             path = f['file']
             parts = os.path.basename(path).split('_')
-            if (len(parts)>4):
-                date, scene, band = parts[2].split('T')[0], parts[5].lstrip('T'), parts[1]
-            else:
+            if (stac_source == "digitalearth-africa" and collection_name == "s2_l2a"):
                 date, scene, band = parts[1].split('T')[0], parts[0].lstrip('T'), parts[2].split(".")[0]
+            elif (stac_source == "swissdatacube" and collection_name == "s2_l2"):
+                date, scene, band = parts[2], parts[1], parts[3].split(".")[0]
+            elif (stac_source == "aws" and collection_name == "sentinel-2-l2a"):
+                date, scene, band = parts[2], parts[1], map_band_name(parts[3].split(".")[0]) 
+            elif (stac_source == "bdc" and collection_name == "S2_L1C_BUNDLE-1" or 
+                stac_source == "bdc" and collection_name == "S2_L2A-1"):
+                date, scene, band = parts[2].split('T')[0], parts[5].lstrip('T'), parts[1]
+            #else:
+            #    date, scene, band = parts[1].split('T')[0], parts[0].lstrip('T'), parts[2].split(".")[0]
+
+                
             cloud_lookup[(date, scene)] = path
             band_lookup[(band, date, scene)] = path
 
@@ -326,7 +349,7 @@ def process_period(period, mosaic_method, data_dir, collection_name, bands, bbox
             sorted_data = sorted(band_list, key=lambda x: x['clean_percentage'], reverse=True)
 
             cloud_sorted_data = sorted(cloud_list, key=lambda x: x['clean_percentage'], reverse=True)
-            
+
         if (mosaic_method=='chrono'):
 
             sorted_data = sorted(band_list, key=lambda x: x['date'])
@@ -338,15 +361,15 @@ def process_period(period, mosaic_method, data_dir, collection_name, bands, bbox
             sorted_data = sorted(band_list, key=lambda x: x['distance_days'])
 
             cloud_sorted_data = sorted(cloud_list, key=lambda x: x['distance_days'])
-
+        
         reproject_data = reproject_tifs(sorted_data=sorted_data, cloud_sorted_data=cloud_sorted_data, data_dir=data_dir, projection_output=projection_output)
         sorted_data = reproject_data['reprojected_images']
         cloud_sorted_data = reproject_data['reprojected_cloud_images']
-
+        
         if (i==0):
-            ordered_lists = merge_scene_provenance_cloud(sorted_data, cloud_sorted_data, scenes, collection_name, bands[i], data_dir, start_date, end_date)
+            ordered_lists = merge_scene_provenance_cloud(sorted_data, cloud_sorted_data, scenes, collection_name, bands[i], data_dir, stac_source, start_date, end_date)
         else:
-            ordered_lists = merge_scene(sorted_data, cloud_sorted_data, scenes, collection_name, bands[i], data_dir, start_date, end_date,)
+            ordered_lists = merge_scene(sorted_data, cloud_sorted_data, scenes, collection_name, bands[i], data_dir, stac_source, start_date, end_date)
 
         filename = sorted_data[0]['file'].split('/')[-1]
         if (collection_name =='S2_L2A-1'):
@@ -388,7 +411,7 @@ def process_period(period, mosaic_method, data_dir, collection_name, bands, bbox
         merge_tifs(tif_files=ordered_lists['merge_files'], output_path=output_file, band=band, path_row=name, extent=extents)
         if (i==0):
             merge_tifs(tif_files=ordered_lists['provenance_merge_files'], output_path=provenance_output_file, band=band, path_row=name, extent=extents)
-            merge_tifs(tif_files=ordered_lists['cloud_merge_files'], output_path=cloud_data_output_file, band=cloud_dict[collection_name]["cloud_band"], path_row=name, extent=extents)
+            merge_tifs(tif_files=ordered_lists['cloud_merge_files'], output_path=cloud_data_output_file, band=cloud_dict[code]["cloud_band"], path_row=name, extent=extents)
         
         clip_raster(input_raster_path=output_file, output_folder=output_dir, clip_geometry=geom, projection_output=projection_output, output_filename=file_name+".tif", grid=grid, tile_id=tile_id)
         if (i==0):

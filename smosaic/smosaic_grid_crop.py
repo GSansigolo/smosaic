@@ -12,12 +12,6 @@ from smosaic.smosaic_clip_raster import clip_raster
 from smosaic.smosaic_utils import COVERAGE_PROJ, get_coverage_projection, load_jsons
 
 
-import rasterio
-import shapely.geometry
-import shapely.ops
-import pyproj
-from pyproj import Transformer
-
 def get_tiles_intersecting_tif(tif_path, grid, projection_output):
     """
     Identify grid tiles that intersect with a given GeoTIFF file's spatial extent.
