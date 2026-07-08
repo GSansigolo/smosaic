@@ -33,11 +33,17 @@ def filter_scenes(collection, data_dir, geom, stac_source=None):
     
     filtered_scenes = []
     
-    for scene in list_dir:
-        item = [item for item in grid_data["features"] if item["properties"]["tile"] == scene]
-        if item:
-            grid_geom = shapely.geometry.shape(item[0]['geometry'])
-            if geom.intersects(grid_geom):
-                filtered_scenes.append(item[0]['properties']['tile'])
+    if (stac_source=="bdc" and collection=="AMZ1-WFI-L4-SR-1"):
+        for scene in list_dir:
+            filtered_scenes.append(scene)
+        return filtered_scenes
     
-    return filtered_scenes
+    else:
+        for scene in list_dir:
+            item = [item for item in grid_data["features"] if item["properties"]["tile"] == scene]
+            if item:
+                grid_geom = shapely.geometry.shape(item[0]['geometry'])
+                if geom.intersects(grid_geom):
+                    filtered_scenes.append(item[0]['properties']['tile'])
+        
+        return filtered_scenes

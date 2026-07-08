@@ -10,6 +10,12 @@ from pathlib import Path
 from typing import Any, Dict
 
 CLOUD_CONFIG = {
+    'BDC:AMZ1-WFI-L4-SR-1': {
+        'cloud_band': 'CMASK',
+        'non_cloud_values': [127],
+        'cloud_values': [255, 0],
+        'no_data_value': 0
+    },
     'BDC:S2-16D-2': {
         'cloud_band': 'SCL',
         'non_cloud_values': [4, 5, 6],
@@ -160,6 +166,12 @@ def open_geojson(file_path):
 def load_jsons(cut_grid):
     if (cut_grid == "BDC_SM_V2"):
         grid_json_path = importlib.resources.files("smosaic.config") / "BDC_SM_V2.json"
+        return json.loads(grid_json_path.read_text(encoding="utf-8"))
+    if (cut_grid == "BDC_MD_V2"):
+        grid_json_path = importlib.resources.files("smosaic.config") / "BDC_MD_V2.json"
+        return json.loads(grid_json_path.read_text(encoding="utf-8"))
+    if (cut_grid == "BDC_LG_V2"):
+        grid_json_path = importlib.resources.files("smosaic.config") / "BDC_LG_V2.json"
         return json.loads(grid_json_path.read_text(encoding="utf-8"))
     if (cut_grid == "grids"):
         grid_json_path = importlib.resources.files("smosaic.config") / "grids.json"

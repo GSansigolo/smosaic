@@ -109,6 +109,7 @@ def mosaic(name, data_dir, stac_url, collection, output_dir, start_year, start_m
 
     if (stac_source == "bdc" and collection == "S2_L1C_BUNDLE-1" or  
         stac_source == "bdc" and collection == "S2_L2A-1" or 
+        stac_source == "bdc" and collection == "AMZ1-WFI-L4-SR-1" or 
         stac_source == "planetary-computer" and collection == "sentinel-2-l2a" or 
         stac_source == "digitalearth-africa" and collection == "s2_l2a" or 
         stac_source == "swissdatacube" and collection == "s2_l2" or
@@ -331,6 +332,8 @@ def process_period(period, mosaic_method, data_dir, collection_name, bands, bbox
             elif (stac_source == "bdc" and collection_name == "S2_L1C_BUNDLE-1" or 
                 stac_source == "bdc" and collection_name == "S2_L2A-1"):
                 date, scene, band = parts[2].split('T')[0], parts[5].lstrip('T'), parts[1]
+            elif (stac_source == "bdc" and collection_name == "AMZ1-WFI-L4-SR-1"):
+                date, scene, band = parts[3], parts[4]+"_"+parts[5], parts[7]
             #else:
             #    date, scene, band = parts[1].split('T')[0], parts[0].lstrip('T'), parts[2].split(".")[0]
 
