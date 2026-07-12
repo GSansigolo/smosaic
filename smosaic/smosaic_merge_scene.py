@@ -109,7 +109,11 @@ def merge_scene(sorted_data, cloud_sorted_data, scenes, collection_name, band, d
 
     for scene in scenes:
         filtered_temp_images = list(filter(lambda x: scene in x, temp_images))
-        
+
+        if not filtered_temp_images:
+            print(f"Warning: No images to merge for scene {scene}. Skipping...")
+            continue
+
         with rasterio.open(filtered_temp_images[0]) as src:
             composite = src.read()
             base_profile = src.profile
@@ -364,6 +368,10 @@ def merge_scene_provenance_cloud(sorted_data, cloud_sorted_data, scenes, collect
         filtered_provenance_temp_images = list(filter(lambda x: scene in x, provenance_temp_images))
         filtered_temp_cloud_images = list(filter(lambda x: scene in x, temp_cloud_images))
         
+        if not filtered_temp_images:
+            print(f"Warning: No images to merge for scene {scene}. Skipping...")
+            continue
+
         with rasterio.open(filtered_temp_images[0]) as src:
             composite = src.read()
             base_profile = src.profile

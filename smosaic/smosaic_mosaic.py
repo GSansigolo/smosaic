@@ -106,7 +106,6 @@ def mosaic(name, data_dir, stac_url, collection, output_dir, start_year, start_m
 
     stac = pystac_client.Client.open(stac_url)
 
-
     if (stac_source == "bdc" and collection == "S2_L1C_BUNDLE-1" or  
         stac_source == "bdc" and collection == "S2_L2A-1" or 
         stac_source == "bdc" and collection == "AMZ1-WFI-L4-SR-1" or 
@@ -199,11 +198,19 @@ def mosaic(name, data_dir, stac_url, collection, output_dir, start_year, start_m
         })
         
     if profile=="crop_condition":
-        bands = ["B02","B04","B08"]
-        spectral_indices = ["NDVI","EVI","EVI2", "SAVI"]
+        if (stac_source == "bdc" and collection == "AMZ1-WFI-L4-SR-1"):
+            bands = ["BAND1","BAND2","BAND3","BAND4"]
+            spectral_indices = ["NDVI","EVI","EVI2"]
+        else:
+            bands = ["B02","B04","B08"]
+            spectral_indices = ["NDVI","EVI","EVI2", "SAVI"]
     elif profile=="urban_analysis":
-        bands = ["B02","B03","B04","B08","B11"]
-        spectral_indices = ["NDBI","NDVI"]
+        if (stac_source == "bdc" and collection == "AMZ1-WFI-L4-SR-1"):
+            bands = ["BAND1","BAND2","BAND3","BAND4"]
+            spectral_indices = ["NDVI"]
+        else:
+            bands = ["B02","B03","B04","B08","B11"]
+            spectral_indices = ["NDBI","NDVI"]
     else:
         spectral_indices = []
 
@@ -234,7 +241,7 @@ def mosaic(name, data_dir, stac_url, collection, output_dir, start_year, start_m
         results = pool.starmap(process_period, args_for_processes)
 
     if(len(spectral_indices)):
-        calculate_spectral_indices(input_folder=output_dir,spectral_indices=spectral_indices)
+        calculate_spectral_indices(input_folder=output_dir,spectral_indices=spectral_indices, stac_source=stac_source, collection=collection)
 
     if (grid_crop and not tile_id):
         clip_from_grid(input_folder=output_dir, grid=grid, tile_id=tile_id)
@@ -397,9 +404,9 @@ def process_period(period, mosaic_method, data_dir, collection_name, bands, bbox
         else:
             duration_str = ""
 
-        file_name = f"{collection_prefix}-{name_upper}{duration_str}-{current_band}_{date_range}"
+        file_name = f"{collection_prefix}-{name_upper}{duration_str}_{current_band}_{date_range}"
         cloud_file_name = f"{collection_prefix}-{name_upper}{duration_str}_{cloud}_{date_range}"
-        provenance_file_name = f"{collection_prefix}-{name_upper}{duration_str}-PROVENANCE_{date_range}"
+        provenance_file_name = f"{collection_prefix}-{name_upper}{duration_str}_PROVENANCE_{date_range}"
 
         output_file = os.path.join(output_dir, f"raw-{file_name}.tif")
 
