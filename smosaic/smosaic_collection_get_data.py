@@ -23,6 +23,11 @@ def collection_get_data(stac, datacube, data_dir, stac_source):
         data_dir (str): Directory path where the downloaded data will be stored.
     """
     collection = datacube['collection']
+    base_collection_dir = os.path.join(data_dir, collection)
+
+    if not os.path.exists(base_collection_dir):
+        os.makedirs(base_collection_dir)
+
     bbox = datacube['bbox']
     start_date = datacube['start_date']
     end_date = datacube['end_date']

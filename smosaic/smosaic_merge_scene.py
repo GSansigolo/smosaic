@@ -84,8 +84,10 @@ def merge_scene(sorted_data, cloud_sorted_data, scenes, collection_name, band, d
         profile['nodata'] = cloud_dict[code]['no_data_value']
 
     for scene in scenes:
-        
-        for i in range(0, min(len(images), 3)):
+
+        scene_images = [item['file'] for item in sorted_data if item.get("scene") == scene]
+
+        for i in range(0, min(len(scene_images), 3)):
 
             images =  [item['file'] for item in sorted_data if item.get("scene") == scene]
 
@@ -110,7 +112,7 @@ def merge_scene(sorted_data, cloud_sorted_data, scenes, collection_name, band, d
         
         with rasterio.open(filtered_temp_images[0]) as src:
             composite = src.read()
-            profile = src.profile
+            base_profile = src.profile
 
         nodata_value = base_profile.get('nodata')
         
@@ -123,10 +125,25 @@ def merge_scene(sorted_data, cloud_sorted_data, scenes, collection_name, band, d
                 is_valid = (composite != nodata_value)
 
         for i in range(1, len(filtered_temp_images)):
-
-            with rasterio.open(filtered_temp_images[i]) as src:
-                img = src.read()
-                profile = src.profile
+            
+            if (stac_source == "bdc" and collection_name == "AMZ1-WFI-L4-SR-1"):
+                with rasterio.open(filtered_temp_images[i]) as src:
+                    img = np.empty_like(composite)
+                    reproject(
+                        source=src.read(),
+                        destination=img,
+                        src_transform=src.transform,
+                        src_crs=src.crs,
+                        src_nodata=src.nodata,
+                        dst_transform=base_profile['transform'],
+                        dst_crs=base_profile['crs'],
+                        dst_nodata=nodata_value,
+                        resampling=Resampling.nearest
+                    )
+            else:
+                with rasterio.open(filtered_temp_images[i]) as src:
+                    img = src.read()
+                    profile = src.profile
 
             if nodata_value is None or not isinstance(nodata_value, (int, float, np.number)):
                 img_valid = np.ones_like(img, dtype=bool)
@@ -149,8 +166,13 @@ def merge_scene(sorted_data, cloud_sorted_data, scenes, collection_name, band, d
         base_name = f"merge_{collection_prefix}_{band}_{scene}_{start_date_str}_{end_date_str}"
 
         output_file = os.path.join(data_dir, f"{base_name}.tif")
-        with rasterio.open(output_file, 'w', **profile) as dst:
-            dst.write(composite)
+        
+        if (stac_source == "bdc" and collection_name == "AMZ1-WFI-L4-SR-1"):
+            with rasterio.open(output_file, 'w', **base_profile) as dst:
+                dst.write(composite)
+        else:
+            with rasterio.open(output_file, 'w', **profile) as dst:
+                dst.write(composite)
 
         merge_files.append(output_file)
 
@@ -162,7 +184,6 @@ def merge_scene(sorted_data, cloud_sorted_data, scenes, collection_name, band, d
     clean_dir(data_dir=data_dir,date_list=date_list)
 
     return dict(merge_files=merge_files)
-
 def merge_scene_provenance_cloud(sorted_data, cloud_sorted_data, scenes, collection_name, band, data_dir, stac_source, start_date=None, end_date=None):
     """
     Merge and organize raster scenes, including cloud band and provenance data, based on mosaic composition function.
@@ -281,21 +302,21 @@ def merge_scene_provenance_cloud(sorted_data, cloud_sorted_data, scenes, collect
             dst.write(masked_cloud_image, 1)
 
     for scene in scenes:
-        
-        for i in range(0, min(len(images), 3)):
 
-            images =  [item['file'] for item in sorted_data if item.get("scene") == scene]
-            cloud_images = [item['file'] for item in cloud_sorted_data if item.get("scene") == scene]
+        scene_images = [item['file'] for item in sorted_data if item.get("scene") == scene]
+        scene_cloud_images = [item['file'] for item in cloud_sorted_data if item.get("scene") == scene]
 
-            image_filename = images[i].split('/')[-1].split('.')[0]
-            cloud_filename = cloud_images[i].split('/')[-1].split('.')[0]
+        for i in range(0, min(len(scene_images), 3)):
 
-            with rasterio.open(images[i]) as src:
+            image_filename = scene_images[i].split('/')[-1].split('.')[0]
+            cloud_filename = scene_cloud_images[i].split('/')[-1].split('.')[0]
+
+            with rasterio.open(scene_images[i]) as src:
                 image_data = src.read()  
                 profile = src.profile
                 height, width = src.shape 
 
-            with rasterio.open(cloud_images[i]) as mask_src:
+            with rasterio.open(scene_cloud_images[i]) as mask_src:
                 cloud_mask = mask_src.read(
                     1,  
                     out_shape=(height, width), 
