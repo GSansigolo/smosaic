@@ -19,6 +19,14 @@
 Changes
 =======
 
+0.9.0 (2026-09-01)
+------------------
+* **Brazilian Amazonia-1 WFI Support**: Added support for Amazonia-1 WFI data hosted on the Brazil Data Cube (BDC) STAC catalog. 🛰️
+* **Data Cube Output Formatting**: Added new ``format_output_datacube()`` function that is automatically executed when processing two or more periods. It format the output into a structured ``collection/scene/bands`` folder directory.
+* **Command Line Interface Updates**: Expanded the CLI to perform both image mosaic generation and data cube building directly via the command line. ✨
+* **New Example Notebook**: Added an experimental Jupyter notebook for function demonstrations:
+    * ``smosaic-bdc-amazonia-1.ipynb``: A comprehensive experiment on generating image mosaics utilizing Amazonia-1 WFI data from the BDC STAC.
+
 0.8.0 (2026-07-25)
 ------------------
 * **Microsoft Planetary Computer Integration**: Added full support for Sentinel-2 data hosted on the Microsoft Planetary Computer STAC API.  🛰️
