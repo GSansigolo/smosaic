@@ -1,6 +1,7 @@
 import os
 import re
 import json
+import shutil
 import pyproj
 import shapely
 import dateutil
@@ -94,6 +95,7 @@ def map_band_name(band_name):
     }
     
     return color_map.get(band_name, band_name)
+
 
 def load_json_config(file_path: str, use_cache: bool = True) -> Dict[str, Any]:
     """
@@ -302,6 +304,50 @@ def clean_dir(data_dir, date_list=None, date_interval=None):
                 os.remove(f)
             except:
                 pass
+
+import os
+import shutil
+
+def format_output_datacube(output_dir):
+    """
+    Organizes files into a hierarchical directory structure based on their names.
+    Expected file name format: {name_upper}{duration_str}_V1_{tile_id}_{date_range}_{bands}.tif
+    """
+    
+    for filename in os.listdir(output_dir):
+        file_path = os.path.join(output_dir, filename)
+        
+        if not os.path.isfile(file_path):
+            continue
+            
+        if "_COG" in filename:
+            new_filename = filename.replace("_COG", "")
+            new_file_path = os.path.join(output_dir, new_filename)
+            
+            os.rename(file_path, new_file_path)
+            
+            filename = new_filename
+            file_path = new_file_path
+            
+        name_without_ext, ext = os.path.splitext(filename)
+        
+        parts = name_without_ext.split('_')
+        
+        if len(parts) >= 5 and parts[1] == 'V1':
+            
+            datacube_name = parts[0]  # {name_upper}{duration_str}
+            tile_id = parts[2]        # {tile_id}
+            band_name = parts[-1]     # {bands} (always the last part before the extension)
+            
+            # output_dir / collection / tile_id / band
+            target_dir = os.path.join(output_dir, datacube_name, tile_id, band_name)
+            
+            os.makedirs(target_dir, exist_ok=True)
+            
+            target_file_path = os.path.join(target_dir, filename)
+            shutil.move(file_path, target_file_path)
+            
+    return output_dir
 
 
 def create_composition_json(output_dir, collection, input_scenes, ignored_scenes, used_scenes):

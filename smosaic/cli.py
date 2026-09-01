@@ -98,7 +98,7 @@ def cli(config, stac_url):
               required=False,
               help='Grid crop check definition')
 
-@click.option('--projection_output',
+@click.option('--proj_output',
               type=int, 
               required=False,
               help='Projection output definition')
@@ -135,7 +135,7 @@ def mosaic(
     grid,
     tile_id,
     grid_crop,
-    projection_output,
+    proj_output,
     bbox,
     profile,
 ):
@@ -177,7 +177,7 @@ def mosaic(
         grid=grid,
         tile_id=tile_id,
         grid_crop=grid_crop,
-        projection_output=projection_output,
+        projection_output=proj_output,
         bbox=bbox,
         profile=profile,
     )
