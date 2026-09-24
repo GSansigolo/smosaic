@@ -305,9 +305,6 @@ def clean_dir(data_dir, date_list=None, date_interval=None):
             except:
                 pass
 
-import os
-import shutil
-
 def format_output_datacube(output_dir):
     """
     Organizes files into a hierarchical directory structure based on their names.
