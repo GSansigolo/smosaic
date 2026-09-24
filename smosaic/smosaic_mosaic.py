@@ -21,7 +21,7 @@ from smosaic.smosaic_merge_scene import merge_scene, merge_scene_provenance_clou
 from smosaic.smosaic_merge_tifs import merge_tifs
 from smosaic.smosaic_reproject_tif import reproject_tifs
 from smosaic.smosaic_spectral_indices import calculate_spectral_indices
-from smosaic.smosaic_utils import add_days_to_date, add_months_to_date, clean_dir, days_between_dates, get_all_cloud_configs, load_jsons, map_band_name
+from smosaic.smosaic_utils import add_days_to_date, add_months_to_date, clean_dir, days_between_dates, format_output_datacube, get_all_cloud_configs, load_jsons, map_band_name
 
 
 def mosaic(name, data_dir, stac_url, collection, output_dir, start_year, start_month, start_day, mosaic_method, stac_source="bdc", grid_crop=False, bands=None, reference_date=None, duration_days=None, end_year=None, end_month=None, end_day=None, duration_months=None, geom=None, grid=None, tile_id=None, bbox=None, profile=None, projection_output=4326):
@@ -105,7 +105,6 @@ def mosaic(name, data_dir, stac_url, collection, output_dir, start_year, start_m
     clean_dir(data_dir)
 
     stac = pystac_client.Client.open(stac_url)
-
 
     if (stac_source == "bdc" and collection == "S2_L1C_BUNDLE-1" or  
         stac_source == "bdc" and collection == "S2_L2A-1" or 
@@ -199,11 +198,19 @@ def mosaic(name, data_dir, stac_url, collection, output_dir, start_year, start_m
         })
         
     if profile=="crop_condition":
-        bands = ["B02","B04","B08"]
-        spectral_indices = ["NDVI","EVI","EVI2", "SAVI"]
+        if (stac_source == "bdc" and collection == "AMZ1-WFI-L4-SR-1"):
+            bands = ["BAND1","BAND2","BAND3","BAND4"]
+            spectral_indices = ["NDVI","EVI","EVI2"]
+        else:
+            bands = ["B02","B04","B08"]
+            spectral_indices = ["NDVI","EVI","EVI2", "SAVI"]
     elif profile=="urban_analysis":
-        bands = ["B02","B03","B04","B08","B11"]
-        spectral_indices = ["NDBI","NDVI"]
+        if (stac_source == "bdc" and collection == "AMZ1-WFI-L4-SR-1"):
+            bands = ["BAND1","BAND2","BAND3","BAND4"]
+            spectral_indices = ["NDVI"]
+        else:
+            bands = ["B02","B03","B04","B08","B11"]
+            spectral_indices = ["NDBI","NDVI"]
     else:
         spectral_indices = []
 
@@ -234,12 +241,15 @@ def mosaic(name, data_dir, stac_url, collection, output_dir, start_year, start_m
         results = pool.starmap(process_period, args_for_processes)
 
     if(len(spectral_indices)):
-        calculate_spectral_indices(input_folder=output_dir,spectral_indices=spectral_indices)
+        calculate_spectral_indices(input_folder=output_dir,spectral_indices=spectral_indices, stac_source=stac_source, collection=collection)
 
     if (grid_crop and not tile_id):
         clip_from_grid(input_folder=output_dir, grid=grid, tile_id=tile_id)
 
     #create_composition_json(output_dir=output_dir, collection=collection, input_scenes=scenes, ignored_scenes=[], used_scenes=[])
+    
+    if (len(periods) > 1):
+        format_output_datacube(output_dir)
 
     clean_dir(data_dir)
 
@@ -397,9 +407,12 @@ def process_period(period, mosaic_method, data_dir, collection_name, bands, bbox
         else:
             duration_str = ""
 
-        file_name = f"{collection_prefix}-{name_upper}{duration_str}-{current_band}_{date_range}"
-        cloud_file_name = f"{collection_prefix}-{name_upper}{duration_str}_{cloud}_{date_range}"
-        provenance_file_name = f"{collection_prefix}-{name_upper}{duration_str}-PROVENANCE_{date_range}"
+        if not tile_id:
+            tile_id = "000"
+
+        file_name = f"{name_upper}{duration_str}_V1_{tile_id}_{date_range}_{current_band}"
+        cloud_file_name = f"{name_upper}{duration_str}_V1_{tile_id}_{date_range}_{cloud}"
+        provenance_file_name = f"{name_upper}{duration_str}_V1_{tile_id}_{date_range}_PROVENANCE"
 
         output_file = os.path.join(output_dir, f"raw-{file_name}.tif")
 

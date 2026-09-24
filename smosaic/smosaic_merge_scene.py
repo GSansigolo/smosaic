@@ -6,7 +6,7 @@ import rasterio
 
 import numpy as np
 
-from rasterio.warp import Resampling
+from rasterio.warp import Resampling, reproject
 
 from smosaic.smosaic_utils import clean_dir, get_all_cloud_configs, map_band_name
 
@@ -84,8 +84,10 @@ def merge_scene(sorted_data, cloud_sorted_data, scenes, collection_name, band, d
         profile['nodata'] = cloud_dict[code]['no_data_value']
 
     for scene in scenes:
-        
-        for i in range(0, min(len(images), 3)):
+
+        scene_images = [item['file'] for item in sorted_data if item.get("scene") == scene]
+
+        for i in range(0, min(len(scene_images), 3)):
 
             images =  [item['file'] for item in sorted_data if item.get("scene") == scene]
 
@@ -107,12 +109,16 @@ def merge_scene(sorted_data, cloud_sorted_data, scenes, collection_name, band, d
 
     for scene in scenes:
         filtered_temp_images = list(filter(lambda x: scene in x, temp_images))
-        
+
+        if not filtered_temp_images:
+            print(f"Warning: No images to merge for scene {scene}. Skipping...")
+            continue
+
         with rasterio.open(filtered_temp_images[0]) as src:
             composite = src.read()
-            profile = src.profile
+            base_profile = src.profile
 
-        nodata_value = profile['nodata']
+        nodata_value = base_profile.get('nodata')
         
         if nodata_value is None or not isinstance(nodata_value, (int, float, np.number)):
             is_valid = np.ones_like(composite, dtype=bool)
@@ -123,10 +129,25 @@ def merge_scene(sorted_data, cloud_sorted_data, scenes, collection_name, band, d
                 is_valid = (composite != nodata_value)
 
         for i in range(1, len(filtered_temp_images)):
-
-            with rasterio.open(filtered_temp_images[i]) as src:
-                img = src.read()
-                profile = src.profile
+            
+            if (stac_source == "bdc" and collection_name == "AMZ1-WFI-L4-SR-1"):
+                with rasterio.open(filtered_temp_images[i]) as src:
+                    img = np.empty_like(composite)
+                    reproject(
+                        source=src.read(),
+                        destination=img,
+                        src_transform=src.transform,
+                        src_crs=src.crs,
+                        src_nodata=src.nodata,
+                        dst_transform=base_profile['transform'],
+                        dst_crs=base_profile['crs'],
+                        dst_nodata=nodata_value,
+                        resampling=Resampling.nearest
+                    )
+            else:
+                with rasterio.open(filtered_temp_images[i]) as src:
+                    img = src.read()
+                    profile = src.profile
 
             if nodata_value is None or not isinstance(nodata_value, (int, float, np.number)):
                 img_valid = np.ones_like(img, dtype=bool)
@@ -149,8 +170,13 @@ def merge_scene(sorted_data, cloud_sorted_data, scenes, collection_name, band, d
         base_name = f"merge_{collection_prefix}_{band}_{scene}_{start_date_str}_{end_date_str}"
 
         output_file = os.path.join(data_dir, f"{base_name}.tif")
-        with rasterio.open(output_file, 'w', **profile) as dst:
-            dst.write(composite)
+        
+        if (stac_source == "bdc" and collection_name == "AMZ1-WFI-L4-SR-1"):
+            with rasterio.open(output_file, 'w', **base_profile) as dst:
+                dst.write(composite)
+        else:
+            with rasterio.open(output_file, 'w', **profile) as dst:
+                dst.write(composite)
 
         merge_files.append(output_file)
 
@@ -162,7 +188,6 @@ def merge_scene(sorted_data, cloud_sorted_data, scenes, collection_name, band, d
     clean_dir(data_dir=data_dir,date_list=date_list)
 
     return dict(merge_files=merge_files)
-
 def merge_scene_provenance_cloud(sorted_data, cloud_sorted_data, scenes, collection_name, band, data_dir, stac_source, start_date=None, end_date=None):
     """
     Merge and organize raster scenes, including cloud band and provenance data, based on mosaic composition function.
@@ -240,14 +265,16 @@ def merge_scene_provenance_cloud(sorted_data, cloud_sorted_data, scenes, collect
         image_filename = images[i].split('/')[-1].split('.')[0]
         parts = image_filename.split('_')
 
-        if (stac_source=="swissdatacube" or stac_source == "aws"):
+        if (stac_source=="swissdatacube" or stac_source=="aws"):
             date = parts[2]
+        if (stac_source=="bdc" and collection_name=="AMZ1-WFI-L4-SR-1"):
+            date = parts[3]
         else:
             for part in parts:
                 if part[0:4].isdigit() and len(part) >= 9 and part[8] == 'T':
                     date = part.split('T')[0]
                     break
-
+        
         datatime_image = datetime.datetime.strptime(date, "%Y%m%d")
         day_of_year = datatime_image.timetuple().tm_yday
 
@@ -279,21 +306,21 @@ def merge_scene_provenance_cloud(sorted_data, cloud_sorted_data, scenes, collect
             dst.write(masked_cloud_image, 1)
 
     for scene in scenes:
-        
-        for i in range(0, min(len(images), 3)):
 
-            images =  [item['file'] for item in sorted_data if item.get("scene") == scene]
-            cloud_images = [item['file'] for item in cloud_sorted_data if item.get("scene") == scene]
+        scene_images = [item['file'] for item in sorted_data if item.get("scene") == scene]
+        scene_cloud_images = [item['file'] for item in cloud_sorted_data if item.get("scene") == scene]
 
-            image_filename = images[i].split('/')[-1].split('.')[0]
-            cloud_filename = cloud_images[i].split('/')[-1].split('.')[0]
+        for i in range(0, min(len(scene_images), 3)):
 
-            with rasterio.open(images[i]) as src:
+            image_filename = scene_images[i].split('/')[-1].split('.')[0]
+            cloud_filename = scene_cloud_images[i].split('/')[-1].split('.')[0]
+
+            with rasterio.open(scene_images[i]) as src:
                 image_data = src.read()  
                 profile = src.profile
                 height, width = src.shape 
 
-            with rasterio.open(cloud_images[i]) as mask_src:
+            with rasterio.open(scene_cloud_images[i]) as mask_src:
                 cloud_mask = mask_src.read(
                     1,  
                     out_shape=(height, width), 
@@ -301,14 +328,16 @@ def merge_scene_provenance_cloud(sorted_data, cloud_sorted_data, scenes, collect
                 )
 
             parts = image_filename.split('_')
-            if (stac_source=="swissdatacube" or stac_source == "aws"):
+            if (stac_source=="swissdatacube" or stac_source=="aws"):
                 date = parts[2]
+            if (stac_source=="bdc" and collection_name=="AMZ1-WFI-L4-SR-1"):
+                date = parts[3]
             else:
                 for part in parts:
                     if part[0:4].isdigit() and len(part) >= 9 and part[8] == 'T':
                         date = part.split('T')[0]
                         break
-
+            
             datatime_image = datetime.datetime.strptime(date, "%Y%m%d")
             day_of_year = datatime_image.timetuple().tm_yday
             
@@ -339,9 +368,13 @@ def merge_scene_provenance_cloud(sorted_data, cloud_sorted_data, scenes, collect
         filtered_provenance_temp_images = list(filter(lambda x: scene in x, provenance_temp_images))
         filtered_temp_cloud_images = list(filter(lambda x: scene in x, temp_cloud_images))
         
+        if not filtered_temp_images:
+            print(f"Warning: No images to merge for scene {scene}. Skipping...")
+            continue
+
         with rasterio.open(filtered_temp_images[0]) as src:
             composite = src.read()
-            profile = src.profile
+            base_profile = src.profile
 
         with rasterio.open(filtered_provenance_temp_images[0]) as src:
             prov_composite = src.read()
@@ -349,7 +382,7 @@ def merge_scene_provenance_cloud(sorted_data, cloud_sorted_data, scenes, collect
         with rasterio.open(filtered_temp_cloud_images[0]) as src:
             cloud_composite = src.read()
 
-        nodata_value = profile['nodata']
+        nodata_value = base_profile.get('nodata')
         
         if nodata_value is None or not isinstance(nodata_value, (int, float, np.number)):
             is_valid = np.ones_like(composite, dtype=bool)
@@ -361,15 +394,61 @@ def merge_scene_provenance_cloud(sorted_data, cloud_sorted_data, scenes, collect
 
         for i in range(1, len(filtered_temp_images)):
 
-            with rasterio.open(filtered_temp_images[i]) as src:
-                img = src.read()
-                profile = src.profile
+            if (stac_source=="bdc" and collection_name=="AMZ1-WFI-L4-SR-1"):
 
-            with rasterio.open(filtered_provenance_temp_images[i]) as src:
-                prov_img = src.read()
+                with rasterio.open(filtered_temp_images[i]) as src:
+                    img = np.empty_like(composite)
+                    reproject(
+                        source=src.read(),
+                        destination=img,
+                        src_transform=src.transform,
+                        src_crs=src.crs,
+                        src_nodata=src.nodata,
+                        dst_transform=base_profile['transform'],
+                        dst_crs=base_profile['crs'],
+                        dst_nodata=nodata_value,
+                        resampling=Resampling.nearest
+                    )
 
-            with rasterio.open(filtered_temp_cloud_images[i]) as src:
-                cloud_img = src.read()
+                with rasterio.open(filtered_provenance_temp_images[i]) as src:
+                    prov_img = np.empty_like(prov_composite)
+                    reproject(
+                        source=src.read(),
+                        destination=prov_img,
+                        src_transform=src.transform,
+                        src_crs=src.crs,
+                        src_nodata=src.nodata,
+                        dst_transform=base_profile['transform'],
+                        dst_crs=base_profile['crs'],
+                        dst_nodata=nodata_value,
+                        resampling=Resampling.nearest
+                    )
+
+                with rasterio.open(filtered_temp_cloud_images[i]) as src:
+                    cloud_img = np.empty_like(cloud_composite)
+                    reproject(
+                        source=src.read(),
+                        destination=cloud_img,
+                        src_transform=src.transform,
+                        src_crs=src.crs,
+                        src_nodata=src.nodata,
+                        dst_transform=base_profile['transform'],
+                        dst_crs=base_profile['crs'],
+                        dst_nodata=nodata_value,
+                        resampling=Resampling.nearest
+                    )
+
+            else:
+                
+                with rasterio.open(filtered_temp_images[i]) as src:
+                    img = src.read()
+                    profile = src.profile 
+
+                with rasterio.open(filtered_provenance_temp_images[i]) as src:
+                    prov_img = src.read()
+
+                with rasterio.open(filtered_temp_cloud_images[i]) as src:
+                    cloud_img = src.read()
 
             if nodata_value is None or not isinstance(nodata_value, (int, float, np.number)):
                 img_valid = np.ones_like(img, dtype=bool)
@@ -380,13 +459,12 @@ def merge_scene_provenance_cloud(sorted_data, cloud_sorted_data, scenes, collect
                     img_valid = (img != nodata_value)
             
             fill_mask = (~is_valid) & img_valid
-                    
+        
             composite[fill_mask] = img[fill_mask]
             prov_composite[fill_mask] = prov_img[fill_mask]
             cloud_composite[fill_mask] = cloud_img[fill_mask]
             
             is_valid = is_valid | fill_mask
-            
         collection_prefix = collection_name.split('-')[0]
         start_date_str = str(start_date).replace("-", "")
         end_date_str = str(end_date).replace("-", "")
@@ -399,14 +477,27 @@ def merge_scene_provenance_cloud(sorted_data, cloud_sorted_data, scenes, collect
         provenance_output_file = os.path.join(data_dir, f"{provenance_base_name}.tif")
         cloud_output_file = os.path.join(data_dir, f"{cloud_base_name}.tif")
 
-        with rasterio.open(output_file, 'w', **profile) as dst:
-            dst.write(composite)
+        if (stac_source=="bdc" and collection_name=="AMZ1-WFI-L4-SR-1"):
 
-        with rasterio.open(provenance_output_file, 'w', **profile) as dst:
-            dst.write(prov_composite)
+            with rasterio.open(output_file, 'w', **base_profile) as dst:
+                dst.write(composite)
 
-        with rasterio.open(cloud_output_file, 'w', **profile) as dst:
-            dst.write(cloud_composite)
+            with rasterio.open(provenance_output_file, 'w', **base_profile) as dst:
+                dst.write(prov_composite)
+
+            with rasterio.open(cloud_output_file, 'w', **base_profile) as dst:
+                dst.write(cloud_composite)
+
+        else:
+
+            with rasterio.open(output_file, 'w', **profile) as dst:
+                dst.write(composite)
+
+            with rasterio.open(provenance_output_file, 'w', **profile) as dst:
+                dst.write(prov_composite)
+
+            with rasterio.open(cloud_output_file, 'w', **profile) as dst:
+                dst.write(cloud_composite)
 
         merge_files.append(output_file)
         provenance_merge_files.append(provenance_output_file)
