@@ -52,6 +52,10 @@ def collection_get_data(stac, datacube, data_dir, stac_source):
             tile = item.id.split("_")[2]
             if tile not in tiles:
                 tiles.append(tile)
+        elif (stac_source=="bdc" and collection=="AMZ1-WFI-L4-SR-1"):
+            tile = item.id.split("_")[4]+"_"+item.id.split("_")[5]
+            if tile not in tiles:
+                tiles.append(tile)
         elif (stac_source=="planetary-computer" and collection=="sentinel-2-l2a"):
             tile = item.id.split("_")[4][1:]
             if tile not in tiles:
@@ -100,6 +104,8 @@ def collection_get_data(stac, datacube, data_dir, stac_source):
             for band in bands:
                 if (stac_source=="bdc" and collection=="S2_L2A-1"):
                     tile = item.id.split("_")[5][1:]
+                elif (stac_source=="bdc" and collection=="AMZ1-WFI-L4-SR-1"):
+                    tile = item.id.split("_")[4]+"_"+item.id.split("_")[5]
                 elif (stac_source=="planetary-computer" and collection=="sentinel-2-l2a"):
                     tile = item.id.split("_")[4][1:]
                 elif (stac_source == "digitalearth-africa" and collection == "s2_l2a"):

@@ -28,6 +28,7 @@ share/python-wheels/
 MANIFEST
 .DS_Store
 notebooks/S2_L2A-1
+notebooks/AMZ1-WFI-L4-SR-1
 notebooks/clear_*
 notebooks/temp_*
 notebooks/merge_*
@@ -44,6 +45,7 @@ notebooks/s2_l2a
 notebooks/s2_l2
 *.zip
 S2_L2A-1
+AMZ1-WFI-L4-SR-1
 clear_*
 temp_*
 merge_*
