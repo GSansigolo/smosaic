@@ -11,7 +11,6 @@ conda install -c conda-forge \
   rasterio=1.4.3 \
   tqdm=4.67.1 \
   requests=2.32.5 \
-  pystac-client=0.9.0 \
   sphinx=8.2.3 \
   sphinx-rtd-theme=3.0.2 \
   docutils=0.21.2 \
@@ -27,6 +26,8 @@ conda install -c conda-forge \
   urllib3=2.6.3 \
   build \
   -y
+
+conda install -c conda-forge --force-reinstall pystac pystac-client -y
 
 pip install \
   "myst-parser>=4.0.0,<4.1" \

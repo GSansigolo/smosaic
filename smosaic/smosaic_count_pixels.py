@@ -1,15 +1,6 @@
 import rasterio
 from rasterio.mask import mask
 import numpy as np
-import shapely.geometry
-from shapely.ops import transform
-from pyproj import CRS, Transformer
-
-from smosaic.smosaic_utils import get_coverage_projection
-
-import rasterio
-from rasterio.mask import mask
-import numpy as np
 from shapely.ops import transform
 from pyproj import CRS, Transformer
 
@@ -40,12 +31,15 @@ def count_pixels(raster_path, target_values, geom):
         else:
             geom_transformed = geom
 
-        out_image, out_transform = mask(
-            src, 
-            [geom_transformed], 
-            crop=True, 
-            nodata=src.nodata
-        )
+        try:
+            out_image, out_transform = mask(
+                src, 
+                [geom_transformed], 
+                crop=True, 
+                nodata=src.nodata
+            )
+        except ValueError:
+            return dict(total=0, count=0)
         
         data = out_image[0] 
 

@@ -28,7 +28,7 @@ def fix_negatives(input_file):
     os.remove(input_file)
     os.rename(temp_file, input_file)
     
-def ndvi_calc(nir, red, compress='LZW'):
+def ndvi_calc(nir, red, file_name, compress='LZW'):
     
     with rasterio.open(red) as red_src, \
         rasterio.open(nir) as nir_src:
@@ -36,7 +36,6 @@ def ndvi_calc(nir, red, compress='LZW'):
         meta = red_src.meta.copy()
         meta.update({'dtype': 'int16', 'nodata': -9999})
         
-        file_name = red.replace("B04","NDVI")
         with rasterio.open(file_name, 'w', **meta) as dst:
             
             for ji, window in red_src.block_windows(1):
@@ -52,7 +51,7 @@ def ndvi_calc(nir, red, compress='LZW'):
 
         print(f"Raster saved to: {str(file_name)}")
 
-def evi_calc(nir, red, blue, compress='LZW'):
+def evi_calc(nir, red, blue, file_name, compress='LZW'):
     
     with rasterio.open(red) as red_src, \
         rasterio.open(nir) as nir_src, \
@@ -61,7 +60,6 @@ def evi_calc(nir, red, blue, compress='LZW'):
         meta = red_src.meta.copy()
         meta.update({'dtype': 'int16', 'nodata': -9999})
         
-        file_name = red.replace("B04","EVI")
         with rasterio.open(file_name, 'w', **meta) as dst:
             
             for ji, window in red_src.block_windows(1):
@@ -78,7 +76,7 @@ def evi_calc(nir, red, blue, compress='LZW'):
                 
         print(f"Raster saved to: {str(file_name)}")
 
-def evi2_calc(nir, red, compress='LZW'):
+def evi2_calc(nir, red, file_name, compress='LZW'):
     
     with rasterio.open(red) as red_src, \
         rasterio.open(nir) as nir_src:
@@ -86,7 +84,6 @@ def evi2_calc(nir, red, compress='LZW'):
         meta = red_src.meta.copy()
         meta.update({'dtype': 'int16', 'nodata': -9999})
         
-        file_name = red.replace("B04","EVI2")
         with rasterio.open(file_name, 'w', **meta) as dst:
             
             for ji, window in red_src.block_windows(1):
@@ -102,7 +99,7 @@ def evi2_calc(nir, red, compress='LZW'):
                 
         print(f"Raster saved to: {str(file_name)}")
 
-def savi_calc(nir, red, compress='LZW'):
+def savi_calc(nir, red, file_name, compress='LZW'):
     
     with rasterio.open(red) as red_src, \
         rasterio.open(nir) as nir_src:
@@ -110,7 +107,6 @@ def savi_calc(nir, red, compress='LZW'):
         meta = red_src.meta.copy()
         meta.update({'dtype': 'int16', 'nodata': -9999})
         
-        file_name = red.replace("B04","SAVI")
         with rasterio.open(file_name, 'w', **meta) as dst:
             
             for ji, window in red_src.block_windows(1):
@@ -126,7 +122,7 @@ def savi_calc(nir, red, compress='LZW'):
                 
         print(f"Raster saved to: {str(file_name)}")
 
-def ndbi_calc(swir_path, nir_path, compress='LZW'):
+def ndbi_calc(swir_path, nir_path, file_name, compress='LZW'):
     
     with rasterio.open(nir_path) as nir_src, \
          rasterio.open(swir_path) as swir_src:
@@ -138,8 +134,6 @@ def ndbi_calc(swir_path, nir_path, compress='LZW'):
             'count': 1,
             'compress': compress
         })
-        
-        file_name = nir_path.replace("B08", "NDBI")
         
         with rasterio.open(file_name, 'w', **meta) as dst:
             
@@ -174,7 +168,7 @@ def ndbi_calc(swir_path, nir_path, compress='LZW'):
 
         print(f"Raster saved to: {str(file_name)}")
 
-def calculate_spectral_indices(input_folder: str, spectral_indices) -> str:
+def calculate_spectral_indices(input_folder: str, spectral_indices, stac_source, collection) -> str:
     """
     Calculate spectral indices from raster data, used with profile "urban_analysis" or "crop_condition".
     
@@ -183,102 +177,80 @@ def calculate_spectral_indices(input_folder: str, spectral_indices) -> str:
         spectral_indices (list): List of spectral indices to calculate.
             Each element is a string identifier of a spectral index (e.g., "NDVI", "EVI", "EVI2", "SAVI").
     """
+
+    if (stac_source == "bdc" and collection == "AMZ1-WFI-L4-SR-1"):
+        pattern_nir = r'_BAND4_'
+        pattern_red = r'_BAND3_'
+        pattern_blue = r'_BAND1_'
+    else:
+        pattern_nir = r'_B08_'
+        pattern_red = r'_B04_'
+        pattern_blue = r'_B02_'
+        pattern_swir = r'_B11_'
+
+        files_swir = [
+            os.path.join(input_folder, f) for f in os.listdir(input_folder)
+            if re.search(pattern_swir, f)
+        ]
+
+    files_nir = [
+        os.path.join(input_folder, f) for f in os.listdir(input_folder)
+        if re.search(pattern_nir, f)
+    ]
+    
+    files_red = [
+        os.path.join(input_folder, f) for f in os.listdir(input_folder)
+        if re.search(pattern_red, f)
+    ]
+
+    files_blue = [
+        os.path.join(input_folder, f) for f in os.listdir(input_folder)
+        if re.search(pattern_blue, f)
+    ]
+
     for spectral_indice in spectral_indices:
 
         if spectral_indice == "NDVI":
-            pattern_nir = r'_B08_'
-            files_nir = [
-                os.path.join(input_folder, f) for f in os.listdir(input_folder)
-                if re.search(pattern_nir, f)
-            ]
-            
-            pattern_red = r'_B04_'
-            files_red = [
-                os.path.join(input_folder, f) for f in os.listdir(input_folder)
-                if re.search(pattern_red, f)
-            ]
-
             for i in range(min(len(files_nir), len(files_red))):
                 fix_negatives(files_nir[i])
                 fix_negatives(files_red[i])
-                ndvi_calc(files_nir[i], files_red[i])
+                if (stac_source == "bdc" and collection == "AMZ1-WFI-L4-SR-1"):  
+                    file_name = files_red[i].replace("BAND3","NDVI")
+                else:
+                    file_name = files_red[i].replace("B04","NDVI")
+                ndvi_calc(files_nir[i], files_red[i], file_name)
         
         if spectral_indice == "EVI":
-            pattern_nir = r'_B08_'
-            files_nir = [
-                os.path.join(input_folder, f) for f in os.listdir(input_folder)
-                if re.search(pattern_nir, f)
-            ]
-            
-            pattern_red = r'_B04_'
-            files_red = [
-                os.path.join(input_folder, f) for f in os.listdir(input_folder)
-                if re.search(pattern_red, f)
-            ]
-
-            pattern_blue = r'_B02_'
-            files_blue = [
-                os.path.join(input_folder, f) for f in os.listdir(input_folder)
-                if re.search(pattern_blue, f)
-            ]
-            
             for i in range(min(len(files_nir), len(files_red))):
                 fix_negatives(files_nir[i])
                 fix_negatives(files_red[i])
                 fix_negatives(files_blue[i])
-                evi_calc(files_nir[i], files_red[i], files_blue[i])
+                if (stac_source == "bdc" and collection == "AMZ1-WFI-L4-SR-1"):  
+                    file_name = files_red[i].replace("BAND3","EVI")
+                else:
+                    file_name = files_red[i].replace("B04","EVI")
+                evi_calc(files_nir[i], files_red[i], files_blue[i], file_name)
         
         if spectral_indice == "EVI2":
-            pattern_nir = r'_B08_'
-            files_nir = [
-                os.path.join(input_folder, f) for f in os.listdir(input_folder)
-                if re.search(pattern_nir, f)
-            ]
-            
-            pattern_red = r'_B04_'
-            files_red = [
-                os.path.join(input_folder, f) for f in os.listdir(input_folder)
-                if re.search(pattern_red, f)
-            ]
-
             for i in range(min(len(files_nir), len(files_red))):
                 fix_negatives(files_nir[i])
                 fix_negatives(files_red[i])
-                evi2_calc(files_nir[i], files_red[i])
+                if (stac_source == "bdc" and collection == "AMZ1-WFI-L4-SR-1"):  
+                    file_name = files_red[i].replace("BAND3","EVI2")
+                else:
+                    file_name = files_red[i].replace("B04","EVI2")
+                evi2_calc(files_nir[i], files_red[i], file_name)
         
         if spectral_indice == "SAVI":
-            pattern_nir = r'_B08_'
-            files_nir = [
-                os.path.join(input_folder, f) for f in os.listdir(input_folder)
-                if re.search(pattern_nir, f)
-            ]
-            
-            pattern_red = r'_B04_'
-            files_red = [
-                os.path.join(input_folder, f) for f in os.listdir(input_folder)
-                if re.search(pattern_red, f)
-            ]
-
             for i in range(min(len(files_nir), len(files_red))):
                 fix_negatives(files_nir[i])
                 fix_negatives(files_red[i])
-                savi_calc(files_nir[i], files_red[i])
+                file_name = files_red[i].replace("B04","SAVI")
+                savi_calc(files_nir[i], files_red[i], file_name)
         
         if spectral_indice == "NDBI":
-            pattern_swir = r'_B11_'
-            files_swir = [
-                os.path.join(input_folder, f) for f in os.listdir(input_folder)
-                if re.search(pattern_swir, f)
-            ]
-            
-            pattern_nir = r'_B08_'
-            files_nir = [
-                os.path.join(input_folder, f) for f in os.listdir(input_folder)
-                if re.search(pattern_nir, f)
-            ]
-            
             for i in range(min(len(files_swir), len(files_nir))):
                 fix_negatives(files_nir[i])
                 fix_negatives(files_swir[i])
-                ndbi_calc(files_swir[i],files_nir[i])
-     
+                file_name = files_nir[i].replace("B08", "NDBI")
+                ndbi_calc(files_swir[i],files_nir[i], file_name)
