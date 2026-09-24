@@ -19,7 +19,7 @@
 Changes
 =======
 
-0.9.0 (2026-09-01)
+0.9.0 (2026-09-23)
 ------------------
 * **Brazilian Amazonia-1 WFI Support**: Added support for Amazonia-1 WFI data hosted on the Brazil Data Cube (BDC) STAC catalog. 🛰️
 * **Data Cube Output Formatting**: Added new ``format_output_datacube()`` function that is automatically executed when processing two or more periods. It format the output into a structured ``collection/scene/bands`` folder directory.
