@@ -1,6 +1,7 @@
 import os
 import re
 import json
+import shutil
 import shapely
 import rasterio
 import datetime
@@ -230,8 +231,9 @@ def mosaic(name, data_dir, stac_url, collection, output_dir, start_year, start_m
     num_processes = multiprocessing.cpu_count()
 
     args_for_processes = [
-        (period, mosaic_method, data_dir, collection_name, bands, bbox, output_dir, 
-         duration_days, duration_months, name, geom, reference_date, projection_output, grid, tile_id, stac_source) 
+        (period, mosaic_method, data_dir,
+        collection_name, bands, bbox, output_dir, duration_days, duration_months,
+        name, geom, reference_date, projection_output, grid, tile_id, stac_source)
         for period in periods
     ]
 
@@ -261,64 +263,33 @@ def process_period(period, mosaic_method, data_dir, collection_name, bands, bbox
 
     process_id = os.getpid()
 
+    scratch_dir = os.path.join(data_dir, f"scratch_{process_id}_{start_date}_{end_date}")
+    os.makedirs(scratch_dir, exist_ok=True)
+
     print(f"[Process {process_id}] Starting to process period: {start_date} to {end_date}\n")
-    
-    coll_data_dir = os.path.join(data_dir+'/'+collection_name)
 
-    for i in range(0, len(bands)):
+    coll_data_dir = os.path.join(data_dir, collection_name)
 
-        cloud_dict = get_all_cloud_configs()
+    try:
+        for i in range(0, len(bands)):
 
-        cloud_list = []   
-        band_list = []             
-        sorted_data = []
+            cloud_dict = get_all_cloud_configs()
+            cloud_list = []
+            band_list = []
+            sorted_data = []
 
-        code = stac_source.upper()+":"+collection_name
-        bands_cloud = [bands[i]] + [cloud_dict[code]['cloud_band']]
-        
-        scenes = filter_scenes(collection_name, data_dir, geom, stac_source)
+            code = stac_source.upper() + ":" + collection_name
+            bands_cloud = [bands[i]] + [cloud_dict[code]['cloud_band']]
 
-        cloud = cloud_dict[code]['cloud_band']
+            scenes = filter_scenes(collection_name, data_dir, geom, stac_source)
+            cloud = cloud_dict[code]['cloud_band']
 
-        for path in scenes:
-
-            start_dt = datetime.datetime.strptime(start_date, "%Y-%m-%d")
-            end_dt = datetime.datetime.strptime(end_date, "%Y-%m-%d")
-
-            filtered_files = [
-                f for f in os.listdir(os.path.join(coll_data_dir, path, cloud))
-                if (date_match := re.search(r'\d{8}', f)) and
-                (date_str := date_match.group()) and
-                len(date_str) == 8 and
-                date_str.isdigit() and
-                (file_date := datetime.datetime.strptime(date_str, "%Y%m%d")) and
-                start_dt <= file_date <= end_dt
-            ]
-            
-            for file in filtered_files:
-                date_match = re.search(r'\d{8}', file)
-                date_str = date_match.group()
-                date = datetime.datetime.strptime(date_str, "%Y%m%d")
-                if (reference_date):
-                    distance_days = days_between_dates(reference_date, file.split("_")[2].split('T')[0])
-                    pixel_count = count_pixels(os.path.join(coll_data_dir, path, cloud_dict[code]['cloud_band'], file), cloud_dict[code]['non_cloud_values'], geom) 
-                    cloud_list.append(dict(band=cloud, date=date.strftime("%Y%m%d"), distance_days=distance_days, clean_percentage=float(pixel_count['count']/pixel_count['total']), scene=path, file='')) 
-                    band_list.append(dict(band=bands[i], date=date.strftime("%Y%m%d"), distance_days=distance_days, clean_percentage=float(pixel_count['count']/pixel_count['total']), scene=path, file=''))
-                else:
-                    pixel_count = count_pixels(os.path.join(coll_data_dir, path, cloud_dict[code]['cloud_band'], file), cloud_dict[code]['non_cloud_values'], geom)
-                    if (pixel_count['total']):
-                        cloud_list.append(dict(band=cloud, date=date.strftime("%Y%m%d"), clean_percentage=float(pixel_count['count']/pixel_count['total']), scene=path, file=''))
-                        band_list.append(dict(band=bands[i], date=date.strftime("%Y%m%d"), clean_percentage=float(pixel_count['count']/pixel_count['total']), scene=path, file=''))
-
-        files_list = []
-
-        for path in scenes:
-            for band in bands_cloud:
+            for path in scenes:
                 start_dt = datetime.datetime.strptime(start_date, "%Y-%m-%d")
                 end_dt = datetime.datetime.strptime(end_date, "%Y-%m-%d")
 
                 filtered_files = [
-                    f for f in os.listdir(os.path.join(coll_data_dir, path, band))
+                    f for f in os.listdir(os.path.join(coll_data_dir, path, cloud))
                     if (date_match := re.search(r'\d{8}', f)) and
                     (date_str := date_match.group()) and
                     len(date_str) == 8 and
@@ -326,119 +297,143 @@ def process_period(period, mosaic_method, data_dir, collection_name, bands, bbox
                     (file_date := datetime.datetime.strptime(date_str, "%Y%m%d")) and
                     start_dt <= file_date <= end_dt
                 ]
+
                 for file in filtered_files:
-                    files_list.append(dict(file=os.path.join(coll_data_dir, path, band, file)))        
+                    date_match = re.search(r'\d{8}', file)
+                    date_str = date_match.group()
+                    date = datetime.datetime.strptime(date_str, "%Y%m%d")
+                    if reference_date:
+                        distance_days = days_between_dates(reference_date, file.split("_")[2].split('T')[0])
+                        pixel_count = count_pixels(os.path.join(coll_data_dir, path, cloud_dict[code]['cloud_band'], file), cloud_dict[code]['non_cloud_values'], geom)
+                        cloud_list.append(dict(band=cloud, date=date.strftime("%Y%m%d"), distance_days=distance_days, clean_percentage=float(pixel_count['count']/pixel_count['total']), scene=path, file=''))
+                        band_list.append(dict(band=bands[i], date=date.strftime("%Y%m%d"), distance_days=distance_days, clean_percentage=float(pixel_count['count']/pixel_count['total']), scene=path, file=''))
+                    else:
+                        pixel_count = count_pixels(os.path.join(coll_data_dir, path, cloud_dict[code]['cloud_band'], file), cloud_dict[code]['non_cloud_values'], geom)
+                        if pixel_count['total']:
+                            cloud_list.append(dict(band=cloud, date=date.strftime("%Y%m%d"), clean_percentage=float(pixel_count['count']/pixel_count['total']), scene=path, file=''))
+                            band_list.append(dict(band=bands[i], date=date.strftime("%Y%m%d"), clean_percentage=float(pixel_count['count']/pixel_count['total']), scene=path, file=''))
 
-        band_lookup, cloud_lookup = {}, {}
-        for f in files_list:
-            path = f['file']
-            parts = os.path.basename(path).split('_')
-            if (stac_source == "digitalearth-africa" and collection_name == "s2_l2a"):
-                date, scene, band = parts[1].split('T')[0], parts[0].lstrip('T'), parts[2].split(".")[0]
-            elif (stac_source == "swissdatacube" and collection_name == "s2_l2"):
-                date, scene, band = parts[2], parts[1], parts[3].split(".")[0]
-            elif (stac_source == "aws" and collection_name == "sentinel-2-l2a"):
-                date, scene, band = parts[2], parts[1], map_band_name(parts[3].split(".")[0]) 
-            elif (stac_source == "bdc" and collection_name == "S2_L1C_BUNDLE-1" or 
-                stac_source == "bdc" and collection_name == "S2_L2A-1"):
-                date, scene, band = parts[2].split('T')[0], parts[5].lstrip('T'), parts[1]
-            elif (stac_source == "bdc" and collection_name == "AMZ1-WFI-L4-SR-1"):
-                date, scene, band = parts[3], parts[4]+"_"+parts[5], parts[7]
-            #else:
-            #    date, scene, band = parts[1].split('T')[0], parts[0].lstrip('T'), parts[2].split(".")[0]
+            files_list = []
+            for path in scenes:
+                for band in bands_cloud:
+                    start_dt = datetime.datetime.strptime(start_date, "%Y-%m-%d")
+                    end_dt = datetime.datetime.strptime(end_date, "%Y-%m-%d")
+                    filtered_files = [
+                        f for f in os.listdir(os.path.join(coll_data_dir, path, band))
+                        if (date_match := re.search(r'\d{8}', f)) and
+                        (date_str := date_match.group()) and
+                        len(date_str) == 8 and
+                        date_str.isdigit() and
+                        (file_date := datetime.datetime.strptime(date_str, "%Y%m%d")) and
+                        start_dt <= file_date <= end_dt
+                    ]
+                    for file in filtered_files:
+                        files_list.append(dict(file=os.path.join(coll_data_dir, path, band, file)))
 
-                
-            cloud_lookup[(date, scene)] = path
-            band_lookup[(band, date, scene)] = path
+            band_lookup, cloud_lookup = {}, {}
+            for f in files_list:
+                path = f['file']
+                parts = os.path.basename(path).split('_')
+                if stac_source == "digitalearth-africa" and collection_name == "s2_l2a":
+                    date, scene, band = parts[1].split('T')[0], parts[0].lstrip('T'), parts[2].split(".")[0]
+                elif stac_source == "swissdatacube" and collection_name == "s2_l2":
+                    date, scene, band = parts[2], parts[1], parts[3].split(".")[0]
+                elif stac_source == "aws" and collection_name == "sentinel-2-l2a":
+                    date, scene, band = parts[2], parts[1], map_band_name(parts[3].split(".")[0])
+                elif stac_source == "planetary-computer" and collection_name == "sentinel-2-l2a":   # <-- NEW
+                    date, scene, band = parts[1].split('T')[0], parts[0].lstrip('T'), parts[2]
+                elif stac_source == "bdc" and collection_name == "S2_L1C_BUNDLE-1" or stac_source == "bdc" and collection_name == "S2_L2A-1":
+                    date, scene, band = parts[2].split('T')[0], parts[5].lstrip('T'), parts[1]
+                elif stac_source == "bdc" and collection_name == "AMZ1-WFI-L4-SR-1":
+                    date, scene, band = parts[3], parts[4] + "_" + parts[5], parts[7]
 
-        for item in band_list:
-            item['file'] = band_lookup.get((item['band'], item['date'], item['scene']), '')
+                cloud_lookup[(date, scene)] = path
+                band_lookup[(band, date, scene)] = path
 
-        for item in cloud_list:
-            item['file'] = cloud_lookup.get((item['date'], item['scene']), '')
+            for item in band_list:
+                item['file'] = band_lookup.get((item['band'], item['date'], item['scene']), '')
+            for item in cloud_list:
+                item['file'] = cloud_lookup.get((item['date'], item['scene']), '')
 
-        if (mosaic_method=='lcf'):
+            if mosaic_method == 'lcf':
+                sorted_data = sorted(band_list, key=lambda x: x['clean_percentage'], reverse=True)
+                cloud_sorted_data = sorted(cloud_list, key=lambda x: x['clean_percentage'], reverse=True)
+            if mosaic_method == 'chrono':
+                sorted_data = sorted(band_list, key=lambda x: x['date'])
+                cloud_sorted_data = sorted(cloud_list, key=lambda x: x['date'])
+            if mosaic_method == 'ctd':
+                sorted_data = sorted(band_list, key=lambda x: x['distance_days'])
+                cloud_sorted_data = sorted(cloud_list, key=lambda x: x['distance_days'])
 
-            sorted_data = sorted(band_list, key=lambda x: x['clean_percentage'], reverse=True)
+            reproject_data = reproject_tifs(
+                sorted_data=sorted_data,
+                cloud_sorted_data=cloud_sorted_data,
+                data_dir=scratch_dir,
+                projection_output=projection_output,
+                start_date=start_date,
+                end_date=end_date,
+            )
+            sorted_data = reproject_data['reprojected_images']
+            cloud_sorted_data = reproject_data['reprojected_cloud_images']
 
-            cloud_sorted_data = sorted(cloud_list, key=lambda x: x['clean_percentage'], reverse=True)
+            if i == 0:
+                ordered_lists = merge_scene_provenance_cloud(sorted_data, cloud_sorted_data, scenes, collection_name, bands[i], scratch_dir, stac_source, start_date, end_date)
+            else:
+                ordered_lists = merge_scene(sorted_data, cloud_sorted_data, scenes, collection_name, bands[i], scratch_dir, stac_source, start_date, end_date)
 
-        if (mosaic_method=='chrono'):
+            filename = sorted_data[0]['file'].split('/')[-1]
+            if collection_name == 'S2_L2A-1':
+                baseline_number = filename.split("_N")[1][0:4]
+            else:
+                baseline_number = 0
 
-            sorted_data = sorted(band_list, key=lambda x: x['date'])
+            band = bands[i]
+            if not os.path.exists(output_dir):
+                os.makedirs(output_dir)
 
-            cloud_sorted_data = sorted(cloud_list, key=lambda x: x['date'])
+            name_upper = name.upper()
+            date_range = f"{str(start_date).replace('-', '')}_{str(end_date).replace('-', '')}"
+            current_band = bands[i]
 
-        if (mosaic_method=='ctd'):
+            if duration_months:
+                duration_str = f"-{duration_months}M"
+            elif duration_days:
+                duration_str = f"-{duration_days}D"
+            else:
+                duration_str = ""
 
-            sorted_data = sorted(band_list, key=lambda x: x['distance_days'])
+            if not tile_id:
+                tile_id = "000"
 
-            cloud_sorted_data = sorted(cloud_list, key=lambda x: x['distance_days'])
-        
-        reproject_data = reproject_tifs(sorted_data=sorted_data, cloud_sorted_data=cloud_sorted_data, data_dir=data_dir, projection_output=projection_output)
-        sorted_data = reproject_data['reprojected_images']
-        cloud_sorted_data = reproject_data['reprojected_cloud_images']
-        
-        if (i==0):
-            ordered_lists = merge_scene_provenance_cloud(sorted_data, cloud_sorted_data, scenes, collection_name, bands[i], data_dir, stac_source, start_date, end_date)
-        else:
-            ordered_lists = merge_scene(sorted_data, cloud_sorted_data, scenes, collection_name, bands[i], data_dir, stac_source, start_date, end_date)
+            file_name = f"{name_upper}{duration_str}_V1_{tile_id}_{date_range}_{current_band}"
+            cloud_file_name = f"{name_upper}{duration_str}_V1_{tile_id}_{date_range}_{cloud}"
+            provenance_file_name = f"{name_upper}{duration_str}_V1_{tile_id}_{date_range}_PROVENANCE"
 
-        filename = sorted_data[0]['file'].split('/')[-1]
-        if (collection_name =='S2_L2A-1'):
-            baseline_number = filename.split("_N")[1][0:4]
-        else:
-            baseline_number = 0
+            output_file = os.path.join(output_dir, f"raw-{file_name}.tif")
 
-        band = bands[i]
+            if i == 0:
+                cloud_data_output_file = os.path.join(output_dir, f"cloud_data_raw-{file_name}.tif")
+                provenance_output_file = os.path.join(output_dir, f"provenance_raw-{file_name}.tif")
 
-        if not os.path.exists(output_dir):
-            os.makedirs(output_dir)
-        
-        collection_prefix = collection_name.split("-")[0].upper()
-        name_upper = name.upper()
-        date_range = f"{str(start_date).replace('-', '')}_{str(end_date).replace('-', '')}"
-        current_band = bands[i]
+            datasets = [rasterio.open(file) for file in ordered_lists['merge_files']]
+            extents = get_dataset_extents(datasets)
 
-        if duration_months:
-            duration_str = f"-{duration_months}M"
-        elif duration_days:
-            duration_str = f"-{duration_days}D"
-        else:
-            duration_str = ""
+            merge_tifs(tif_files=ordered_lists['merge_files'], output_path=output_file, band=band, path_row=name, extent=extents)
+            if i == 0:
+                merge_tifs(tif_files=ordered_lists['provenance_merge_files'], output_path=provenance_output_file, band=band, path_row=name, extent=extents)
+                merge_tifs(tif_files=ordered_lists['cloud_merge_files'], output_path=cloud_data_output_file, band=cloud_dict[code]["cloud_band"], path_row=name, extent=extents)
 
-        if not tile_id:
-            tile_id = "000"
+            clip_raster(input_raster_path=output_file, output_folder=output_dir, clip_geometry=geom, projection_output=projection_output, output_filename=file_name + ".tif", grid=grid, tile_id=tile_id)
+            if i == 0:
+                clip_raster(input_raster_path=cloud_data_output_file, output_folder=output_dir, clip_geometry=geom, projection_output=projection_output, output_filename=cloud_file_name + ".tif", grid=grid, tile_id=tile_id)
+                clip_raster(input_raster_path=provenance_output_file, output_folder=output_dir, clip_geometry=geom, projection_output=projection_output, output_filename=provenance_file_name + ".tif", grid=grid, tile_id=tile_id)
 
-        file_name = f"{name_upper}{duration_str}_V1_{tile_id}_{date_range}_{current_band}"
-        cloud_file_name = f"{name_upper}{duration_str}_V1_{tile_id}_{date_range}_{cloud}"
-        provenance_file_name = f"{name_upper}{duration_str}_V1_{tile_id}_{date_range}_PROVENANCE"
+            fix_baseline_number(input_folder=output_dir, input_filename=file_name, baseline_number=baseline_number)
 
-        output_file = os.path.join(output_dir, f"raw-{file_name}.tif")
+            generate_cog(input_folder=output_dir, input_filename=file_name, compress='DEFLATE')
+            if i == 0:
+                generate_cog(input_folder=output_dir, input_filename=cloud_file_name, compress='DEFLATE')
+                generate_cog(input_folder=output_dir, input_filename=provenance_file_name, compress='DEFLATE')
 
-        if i == 0:
-            cloud_data_output_file = os.path.join(output_dir, f"cloud_data_raw-{file_name}.tif")
-            provenance_output_file = os.path.join(output_dir, f"provenance_raw-{file_name}.tif")
-        
-        datasets = [rasterio.open(file) for file in  ordered_lists['merge_files']]        
-        
-        extents = get_dataset_extents(datasets)
-
-        merge_tifs(tif_files=ordered_lists['merge_files'], output_path=output_file, band=band, path_row=name, extent=extents)
-        if (i==0):
-            merge_tifs(tif_files=ordered_lists['provenance_merge_files'], output_path=provenance_output_file, band=band, path_row=name, extent=extents)
-            merge_tifs(tif_files=ordered_lists['cloud_merge_files'], output_path=cloud_data_output_file, band=cloud_dict[code]["cloud_band"], path_row=name, extent=extents)
-        
-        clip_raster(input_raster_path=output_file, output_folder=output_dir, clip_geometry=geom, projection_output=projection_output, output_filename=file_name+".tif", grid=grid, tile_id=tile_id)
-        if (i==0):
-            clip_raster(input_raster_path=cloud_data_output_file, output_folder=output_dir, clip_geometry=geom,projection_output=projection_output, output_filename=cloud_file_name+".tif", grid=grid, tile_id=tile_id)
-            clip_raster(input_raster_path=provenance_output_file, output_folder=output_dir, clip_geometry=geom, projection_output=projection_output, output_filename=provenance_file_name+".tif", grid=grid, tile_id=tile_id)
-        
-        fix_baseline_number(input_folder=output_dir, input_filename=file_name, baseline_number=baseline_number)
-
-        generate_cog(input_folder=output_dir, input_filename=file_name, compress='DEFLATE')
-        if (i==0):
-            generate_cog(input_folder=output_dir, input_filename=cloud_file_name, compress='DEFLATE')
-            generate_cog(input_folder=output_dir, input_filename=provenance_file_name, compress='DEFLATE')
-        
-        clean_dir(data_dir=data_dir,date_interval=str("-"+str(start_date).replace("-", "")+'_'+str(end_date).replace("-", "")))
+    finally:
+        shutil.rmtree(scratch_dir, ignore_errors=True)

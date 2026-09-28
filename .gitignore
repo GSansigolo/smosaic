@@ -43,6 +43,13 @@ notebooks/ms-sentinel-2-l2a
 notebooks/aws-sentinel-2-l2a
 notebooks/s2_l2a
 notebooks/s2_l2
+notebooks/SWS__s2_l2
+notebooks/SP___S2_L2A-1
+notebooks/MPC__sentinel-2-l2a
+notebooks/BDC_SP___S2_L2A-1
+notebooks/BDC__S2_L2A-1
+notebooks/BDC__AMZ1-WFI-L4-SR-1
+notebooks/AWS__sentinel-2-l2a
 *.zip
 S2_L2A-1
 AMZ1-WFI-L4-SR-1
