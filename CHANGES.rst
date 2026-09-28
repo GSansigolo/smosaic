@@ -19,6 +19,11 @@
 Changes
 =======
 
+0.9.1 (2026-09-28)
+------------------
+* **Fix Amazonia-1 WFI multiprocessing**: Added fix for Amazonia-1 WFI datacube generation 
+* **Fix Microsoft Planetary Computer Integration**: Fix the support for Sentinel-2 data hosted on the Microsoft Planetary Computer STAC API.  🛰️
+
 0.9.0 (2026-09-23)
 ------------------
 * **Brazilian Amazonia-1 WFI Support**: Added support for Amazonia-1 WFI data hosted on the Brazil Data Cube (BDC) STAC catalog. 🛰️
