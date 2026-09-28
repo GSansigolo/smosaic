@@ -256,53 +256,73 @@ def geometry_collides_with_bbox(geometry,input_bbox):
 
     return geometry.intersects(bbox_polygon)
 
+import os
+import re
+
 
 def clean_dir(data_dir, date_list=None, date_interval=None):
+    """
+    Remove intermediate files from a shared working directory.
 
-    if date_interval:
-        
-        pattern_date = re.escape(date_interval)
+    Only files that explicitly belong to the period(s) being cleaned are
+    removed. Downloaded scenes (which live in sub-directories) and final
+    COG products (*_COG.tif) are never touched.
 
-        files_to_delete = [
-            f for f in os.listdir(data_dir)
-            if re.search(pattern_date, f) and "merge_" not in f
-        ]
+    Parameters
+    ----------
+    data_dir : str
+        Directory that holds the intermediate rasters.
+    date_list : list[str], optional
+        A list of period tokens, e.g.
+        ["-20260101_20260116", "-20260117_20260201", ...].
+    date_interval : str, optional
+        A single period token, e.g. "-20260117_20260201".
+    """
 
-        for f in files_to_delete:
-            try:
-                full_path = os.path.join(data_dir, f)
-                os.remove(full_path)
-            except OSError:
-                pass
+    if not os.path.isdir(data_dir):
+        return
 
-    elif date_list:
-        for date in date_list:
-
-            pattern_date = re.escape(date)
-
-            files_to_delete = [
-                f for f in os.listdir(data_dir)
-                if re.search(pattern_date, f) and "merge_" not in f
-            ]
-
-            for f in files_to_delete:
-                try:
-                    pass
-                    os.remove(f)
-                except:
-                    pass
-
+    if date_interval is not None:
+        tokens = [date_interval]
+    elif date_list is not None:
+        tokens = list(date_list)
     else:
-        files_to_delete = [
-            os.path.join(data_dir, f) 
-            for f in os.listdir(data_dir)
-            if f.endswith(".tif") and not f.endswith("_COG.tif")
-        ]
+        return
 
-        for f in files_to_delete:
+    patterns = []
+    for tok in tokens:
+        stripped = str(tok).strip("-")          
+        if "_" not in stripped:
+            continue
+        a, b = stripped.split("_", 1)
+        if len(a) != 8 or len(b) != 8 or not a.isdigit() or not b.isdigit():
+            continue
+
+        variants = {f"{a}_{b}"}
+        variants.add(f"{a[:4]}-{a[4:6]}-{a[6:]}_{b[:4]}-{b[4:6]}-{b[6:]}")
+
+        for v in variants:
+            patterns.append(re.compile(re.escape(v)))
+
+    if not patterns:
+        return
+
+    for name in os.listdir(data_dir):
+        full = os.path.join(data_dir, name)
+
+        if not os.path.isfile(full):
+            continue
+
+        if not name.endswith(".tif"):
+            continue
+
+        if name.endswith("_COG.tif"):
+            continue
+
+        if any(p.search(name) for p in patterns):
             try:
-                os.remove(f)
-            except:
+                os.remove(full)
+            except OSError:
                 pass
 
 def format_output_datacube(output_dir):
