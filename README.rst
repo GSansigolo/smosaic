@@ -20,9 +20,9 @@
    :align: center
    :alt: smosaic logo
 
-==================================================================
-Seamless Satellite Image Mosaics from SpatioTemporal Asset Catalog
-==================================================================
+=============================================================================================
+A tool for building multi-temporal satellite image mosaics from SpatioTemporal Asset Catalogs
+=============================================================================================
 
 
 .. image:: https://img.shields.io/badge/License-GPLv3-blue.svg
@@ -58,7 +58,7 @@ Seamless Satellite Image Mosaics from SpatioTemporal Asset Catalog
 About
 =====
 
-smosaic is a free and open-source tool for building Analysis-Ready Data (ARD) seamless satellite image mosaics directly from STAC, designed for analysts without deep programming knowledge. The system connects to STAC catalogs from Brazil Data Cube (BDC), Digital Earth Africa, Swiss Data Cube, Amazon Web Services (AWS) and Microsoft Planetary Computer, and can incorporate more catalogs.
+smosaic is a a free and open-source software tool that builds multi-temporal satellite image mosaics directly from service catalogs. Designed for analysts without deep programming knowledge, the tool incorporates the Brazil Data Cube (BDC) Least Cloud-Cover First (LCF) function together with a new temporal compositing function, the Closest-to-Date (CTD). CTD creates temporally consistent mosaics that maintain observations near a specified reference date, allowing for reproducible analysis of rapidly evolving land-cover patterns. The tool can connect to STAC catalogs from different providers, such as BDC, Digital Earth Africa, Swiss Data Cube, Earth Search Amazon Web Services (AWS) and Microsoft Planetary Computer and enable the generation of custom time-interval satellite image mosaics directly on a local workstation.
 
 
 Installation
