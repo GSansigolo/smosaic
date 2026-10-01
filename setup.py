@@ -24,7 +24,7 @@ setup(
             "smosaic=smosaic.cli:cli",
         ],
     },
-    description='Seamless Satellite Image Mosaics from SpatioTemporal Asset Catalog',
+    description='A tool for building multi-temporal satellite image mosaics from STAC',
     author='Gabriel Sansigolo',
     author_email = "gabrielsansigolo@gmail.com",
     url = "https://github.com/brazil-data-cube/smosaic",
