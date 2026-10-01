@@ -20,9 +20,9 @@
    :align: center
    :alt: smosaic logo
 
-=============================================================================================
-A tool for building multi-temporal satellite image mosaics from SpatioTemporal Asset Catalogs
-=============================================================================================
+====================================================================
+A tool for building multi-temporal satellite image mosaics from STAC
+====================================================================
 
 
 .. image:: https://img.shields.io/badge/License-GPLv3-blue.svg
